@@ -335,6 +335,15 @@ def example(number):
                 included_runs=[15483, 15484, 15487, 15489, 15490, 15491, 15492, 15493, 15500, 15503, 15511, 15513, 15516, 15524, 15525, 15527, 15533, 15541])
     if number==4:
         variation_statistics('Temperature Variation', '07.02.2022')
+        
+        
+""" January 2022 Data 
+One can input these into the variation_plot function, or any of the runs into the run_time_delta_computation or statistics_plot functions.
+"""
+# included_runs = [15358, 15359, 15362, 15366] # Power cycle 1
+# included_runs = [15384, 15387, 15389, 15390, 15395, 15397, 15400, 15401] Power cycle 2
+# included_runs = [15483, 15484, 15487, 15489, 15490, 15491, 15492, 15493, 15500, 15503, 15511, 15513, 15516, 15524, 15525, 15527, 15533, 15541] # Temperature 07.02.2022
+# included_runs = [15373, 15387, 15422, 15533] # Variation over several days
 
 
 # In[ ]:
