@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[14]:
+
+
 """ This script is used to compute and plot the time deltas of the CMS ECAL prototype from the ETH group at the CERN Prevessin site.
 The mainly used functions to call from outside the script are down below: run_time_delta_computation, statistics_plot, variation_plot, and variation_statistics.
 """
@@ -163,7 +169,7 @@ def run_time_delta_computation(run_number, save_folder = save_folder_global, raw
         time_delta_data, mu_arr, mu_error_arr, sigma_arr, sigma_error_arr  = compute_time_delta(time, ref_idx, run_name)
         statistics = np.hstack((mu_arr, mu_error_arr, sigma_arr, sigma_error_arr))
         time_delta_data.to_hdf(run_save + f'Time Delta Run {run_name} ref_ch {ref_channel}.h5', key='df', mode='w')
-        with h5py.File(run_save + 'Statistics Split ' + split_name + f' ref_ch {ref_channel}.h5', 'w') as hf:
+        with h5py.File(run_save + 'temp/' + 'Statistics Split ' + split_name + f' ref_ch {ref_channel}.h5', 'w') as hf: #TODO: Remove temp
             hf.create_dataset("stats",  data=statistics)
             
 
@@ -178,14 +184,14 @@ def statistics_plot(run_number, save_folder=save_folder_global, raw_data_folder=
     """
     
     stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
-    folder =  raw_data_folder + run_number
+    folder =  raw_data_folder + str(int(run_number))
     run_name = os.path.basename(os.path.normpath(folder))
     print('Run: ', run_name, ' Split: ', split_name)
     run_save = save_folder + '/Run ' + str(run_name) + '/' + split_name + '/'
     Path(run_save).mkdir(parents=True, exist_ok=True)
 
     for k, ref_channel in enumerate(channel_names):
-        with h5py.File(run_save + 'Statistics Split' + split_name + f' ref_ch {ref_channel}.h5', 'r') as hf:
+        with h5py.File(run_save + 'temp/' + 'Statistics Split ' + split_name + f' ref_ch {ref_channel}.h5', 'r') as hf: #TODO remove temp
             statistics = hf[f"stats"][:]
             
         for i in range(len(statistics[0,:])):
@@ -291,9 +297,7 @@ def variation_statistics(measurement_name, measurement_date):
                         Could and should be replaced by a unique identifier, like an ID for a batch of runs.
     """
     
-    
-    save_folder = save_folder_global
-    with h5py.File(save_folder + '/' + f'{measurement_name}' + f' {measurement_date}' + ' Stats.h5', 'r') as hf:
+    with h5py.File(variation_save_folder_global + '/' + f'{measurement_name}' + f' {measurement_date}' + ' Stats.h5', 'r') as hf:
         stats_of_stats = hf["stats"][:]
 
     print(stats_of_stats[:, :, 1], stats_of_stats.shape)
@@ -316,8 +320,9 @@ def variation_statistics(measurement_name, measurement_date):
             cb = plt.colorbar(c)
             cb.set_label('Deviation over Temperature (ps)')
             plt.title('Temperature Variation' + '\n' +  f'{plot_titles[i]}, Reference Channel: {ref_channel}')
+            plt.savefig(variation_save + f'Variation Stats Colormesh {plot_titles[i]} Ref Channel {to_channel_converter(k)}.pdf', dpi = 300)      
             plt.show()
-        plt.savefig(variation_save + f'Variation Stats Colormesh Ref Channel {to_channel_converter(k)}.pdf', dpi = 300)            
+              
 
 """ Example uses """       
 def example(number):
@@ -329,4 +334,11 @@ def example(number):
         variation_plot('Temperature Variation', '07.02.2022', 
                 included_runs=[15483, 15484, 15487, 15489, 15490, 15491, 15492, 15493, 15500, 15503, 15511, 15513, 15516, 15524, 15525, 15527, 15533, 15541])
     if number==4:
-        variation_statistics('Temperature Variation', '07.02.22')
+        variation_statistics('Temperature Variation', '07.02.2022')
+
+
+# In[ ]:
+
+
+
+
