@@ -24,7 +24,7 @@ from pathlib import Path
 
 """ Global Variables """
 
-save_folder_global = 'Synchronisation January 2022' # Processed data from time delta computation will be stored in a folder named like this. 
+save_folder_global = 'Synchronisation' # Processed data from time delta computation will be stored in a folder named like this. 
                                         # The data from January 2022 is in 'Synchronisation January 2022'
 raw_data_folder_global = '/eos/home-s/spigazzi/Lab21/data/Reco/' # Raw data is stored here
 variation_save_folder_global = 'Variation Stats ' # Variation plots are saved here
@@ -169,7 +169,7 @@ def run_time_delta_computation(run_number, save_folder = save_folder_global, raw
         time_delta_data, mu_arr, mu_error_arr, sigma_arr, sigma_error_arr  = compute_time_delta(time, ref_idx, run_name)
         statistics = np.hstack((mu_arr, mu_error_arr, sigma_arr, sigma_error_arr))
         time_delta_data.to_hdf(run_save + f'Time Delta Run {run_name} ref_ch {ref_channel}.h5', key='df', mode='w')
-        with h5py.File(run_save + 'temp/' + 'Statistics Split ' + split_name + f' ref_ch {ref_channel}.h5', 'w') as hf: #TODO: Remove temp
+        with h5py.File(run_save + 'Statistics Split ' + split_name + f' ref_ch {ref_channel}.h5', 'w') as hf:
             hf.create_dataset("stats",  data=statistics)
             
 
@@ -191,7 +191,7 @@ def statistics_plot(run_number, save_folder=save_folder_global, raw_data_folder=
     Path(run_save).mkdir(parents=True, exist_ok=True)
 
     for k, ref_channel in enumerate(channel_names):
-        with h5py.File(run_save + 'temp/' + 'Statistics Split ' + split_name + f' ref_ch {ref_channel}.h5', 'r') as hf: #TODO remove temp
+        with h5py.File(run_save + 'Statistics Split ' + split_name + f' ref_ch {ref_channel}.h5', 'r') as hf:
             statistics = hf[f"stats"][:]
             
         for i in range(len(statistics[0,:])):
@@ -205,7 +205,7 @@ def statistics_plot(run_number, save_folder=save_folder_global, raw_data_folder=
             cb.set_label('Deviation over Channels (ps)')
             plt.title(f'{stat_names[i]}, Run: {run_name}, Split: {split_name}, Reference Channel: {ref_channel}')
             plt.show()
-        plt.savefig(run_save + '/temp/' + f'Stats Colormesh Ref Channel {to_channel_converter(k)}.pdf', dpi = 300) #TODO remove temp
+        plt.savefig(run_save + f'Stats Colormesh Ref Channel {to_channel_converter(k)}.pdf', dpi = 300)
         
 
 def variation_plot(measurement_name, measurement_date, included_runs, mu_range = 2000, sigma_range = 150, specific_ref_channel='all'):
