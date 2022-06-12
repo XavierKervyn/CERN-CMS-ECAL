@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[14]:
+# In[39]:
 
 
 """ This script is used to compute and plot the time deltas of the CMS ECAL prototype from the ETH group at the CERN Prevessin site.
@@ -288,19 +288,22 @@ def variation_plot(measurement_name, measurement_date, included_runs, mu_range =
                     hf.create_dataset("stats",  data=stats_ref_array)
         
             
-def variation_statistics(measurement_name, measurement_date):
+def variation_statistics(measurement_name, measurement_date, colormesh_max=10, within_board_plot=True):
     """ Plots the mu and sigma and their errors of a measurement over several runs in colormesh plots.
     
     measurement_name -- (string) Title of the measurement, for example power cycle or temperature
     measurement_date -- (string) Date of the measurement. Originally used to distinguish between series of runs, 
                         but the date will not be unique enough for future measurements.
                         Could and should be replaced by a unique identifier, like an ID for a batch of runs.
+    colormesh_max -- (float) The maximum of the scale in the colormesh plot. Lowering this reveals finer differences, but blows out rough ones.
+    within_board_plot -- (boolean) Plots the average value of a statistic within the different boards. Still needs refinement as it does not properly
+                        handle erroneous channels as of now.
     """
     
     with h5py.File(variation_save_folder_global + '/' + f'{measurement_name}' + f' {measurement_date}' + ' Stats.h5', 'r') as hf:
         stats_of_stats = hf["stats"][:]
 
-    print(stats_of_stats[:, :, 1], stats_of_stats.shape)
+    #print(stats_of_stats[:, :, 1], stats_of_stats.shape)
 
     plot_titles = ['Mean of Mu', 'Std Dev of Mu', 'Mean of Sigma', 'Std Dev of Sigma']
     variation_save = variation_save_folder_global + '/' + measurement_name + '/' + measurement_date + '/'
@@ -309,11 +312,26 @@ def variation_statistics(measurement_name, measurement_date):
     # Plotting
     for k, ref_channel in enumerate(channel_names):
         for i in range(len(stats_of_stats[0,:,0])):
-
+            
             # Used for skipping means, they are not really interesting without the std dev
             if (i == 0) or (i ==2):
                 continue
+            
+            # Visualizing the average value of a statistic within a board. The lowest one (desirable for std dev) is marked red.
+            if within_board_plot:
+                if k%5==0:
+                    within_board_performances = []
+                    for q in range(len(letters)):
+                        within_board_performances.append(np.mean(stats_of_stats[(q*len(numbers)):(q*len(numbers))+5, i, k]))
+                    within_board_performances = np.array(within_board_performances)
+                    print(within_board_performances)
+                    plt.figure()
+                    barlist = plt.bar(letters, height = within_board_performances)
+                    barlist[np.argmin(within_board_performances)].set_color('r')
+                    plt.title(f'{plot_titles[i]}: Within board performance for reference board {letters[k//5]}')
+                    plt.show()
 
+                
             plt.figure()
             stat_data = stats_of_stats[:, i, k].reshape(4,5)
             c = plt.pcolormesh(X, Y, stat_data, vmin = 0, vmax = 10)
@@ -322,7 +340,7 @@ def variation_statistics(measurement_name, measurement_date):
             plt.title('Temperature Variation' + '\n' +  f'{plot_titles[i]}, Reference Channel: {ref_channel}')
             plt.savefig(variation_save + f'Variation Stats Colormesh {plot_titles[i]} Ref Channel {to_channel_converter(k)}.pdf', dpi = 300)      
             plt.show()
-              
+                
 
 """ Example uses """       
 def example(number):
