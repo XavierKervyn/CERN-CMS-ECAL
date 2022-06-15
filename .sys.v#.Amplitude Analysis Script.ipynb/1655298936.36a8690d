@@ -2,7 +2,7 @@
  "cells": [
   {
    "cell_type": "code",
-   "execution_count": 1,
+   "execution_count": 41,
    "id": "5706b7f7",
    "metadata": {},
    "outputs": [
@@ -12,7 +12,7 @@
        "' January 2022 Data \\nOne can input these into the variation_plot function, or any of the runs into the run_amplitude_computation function.\\n'"
       ]
      },
-     "execution_count": 1,
+     "execution_count": 41,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -37,8 +37,6 @@
     "\n",
     "\n",
     "\"\"\" Global Variables \"\"\"\n",
-    "\n",
-    "# TEST\n",
     "\n",
     "save_folder_global = 'Synchronisation' # Processed data from time delta computation will be stored in a folder named like this. \n",
     "                                        # The data from January 2022 is in 'Synchronisation January 2022'\n",
