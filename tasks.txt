@@ -1,0 +1,42 @@
+// MAIN GOAL:
+-study the linearity & time resolution of the upgraded ECAL
+-implement a way of generating plots in an automatic fashion
+
+// TASKS:
+-adapt board: nombre de boards actives?
+-attribution des boards 'A', 'C', ect. quand on n'a qu'une seule board active?
+
+-changer unité amplitude
+-envoyer erreur si runs pas cohérents
+-check save paths for statistics
+-check save paths for plots
+-check if h5 file generated to avoid generating it twice
+-argparse
+-standard dev = sqrt(variance)
+-new method: evolution(spill) for a given run
+-DAQ: knowing when the run is finished
+-set single methods to private
+-lancer exception si argument d'une classe n'est pas une liste d'int
+-test variation_plot_runs with a specific channel
+-lancer une exception lorsqu'une liste contient un seul run pour les méthodes de variation sur plusieurs runs
+-vérifier que le channel de référence est dans channel_names
+-lancer une exception dans statistics et plots variation si h5 pas encore généré
+-vérifier avec Pigazzini si variation_plot runs OK pour time delta
+
+
+// SETTINGS
+Run: identify why laser power
+-15608: 50
+-15609: 100
+-15610: 150
+-15611: 200
+-15612: 100
+-15613: ?
+-15614: 200
+
+// Thursday
+-15617: 180 (111) - max: ??
+-15618: 200 (179) - max: 8032.4
+-15619: 150 (26) - max: 772.0
+-15621: 190 (156) - max: 8575.1
+
