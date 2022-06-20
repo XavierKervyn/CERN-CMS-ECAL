@@ -17,7 +17,7 @@ class Amplitude(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # GENERAL
     
-    def generate_stats(self, single_run, board, param):
+    def generate_stats(self, single_run, board, param, plot=False):
         # TODO: docstring
         
         folder =  self.raw_data_folder + str(int(single_run))
@@ -65,8 +65,12 @@ class Amplitude(ECAL):
 
                 for i, channel in enumerate(slicing):
                     border_size = 2000 # TODO: is not useful?
-
-                    hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
+                    
+                    if plot:
+                        plt.figure()
+                        hist, bin_edges, _ = plt.hist(aspill_pd_temp[channel], bins = 1500, label="Amplitude Histogram")
+                    else:
+                        hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
 
                     bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
@@ -81,11 +85,27 @@ class Amplitude(ECAL):
                     mu_error_arr[i] = mu_error
                     sigma_arr[i] = sigma
                     sigma_error_arr[i] = sigma_error
+                    
+                    if plot:
+                        # plotting the histogram with a gaussian fit, the mean and the standard deviation
+                        plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
+                        plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
+                        sigma_color = 'pink'
+                        plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
+                        plt.axvline(mu - sigma, color = sigma_color)
+
+                        plt.title(f'Run: {run_name}, Channel: {self.channel_names[i]}, Spill {spill}')
+                        plt.xlabel('Amplitude (??)')
+                        plt.ylabel('Occurence (a.u.)')
+                        plt.legend(loc='best')
+
+                        plt.show()
+                    
                 amp_mean_spill[j,:] = mu_arr
                 amp_mean_err_spill[j,:] = mu_error_arr
                 amp_sigma_spill[j,:] = sigma_arr
                 amp_sigma_err_spill[j,:] = sigma_error_arr
-
+                
             # convert the matrices to Dataframes
             spill_amp_mean_df = pd.DataFrame(amp_mean_spill, columns=col_list)
             spill_amp_mean_err_df = pd.DataFrame(amp_mean_err_spill, columns=col_list)
@@ -93,10 +113,10 @@ class Amplitude(ECAL):
             spill_amp_sigma_err_df = pd.DataFrame(amp_sigma_err_spill, columns=col_list)
         
             # save these in .csv files
-            spill_amp_mean_df.to_csv(self.save_folder + f'Spill mean amplitude run {single_run} board {board}.csv')
-            spill_amp_mean_err_df.to_csv(self.save_folder + f'Spill error mean amplitude run {single_run} board {board}.csv')
-            spill_amp_sigma_df.to_csv(self.save_folder + f'Spill sigma amplitude run {single_run} board {board}.csv')
-            spill_amp_sigma_err_df.to_csv(self.save_folder + f'Spill error sigma amplitude run {single_run} board {board}.csv')
+            spill_amp_mean_df.to_csv(self.save_folder + f'/Spill mean amplitude run {single_run} board {board}.csv')
+            spill_amp_mean_err_df.to_csv(self.save_folder + f'/Spill error mean amplitude run {single_run} board {board}.csv')
+            spill_amp_sigma_df.to_csv(self.save_folder + f'/Spill sigma amplitude run {single_run} board {board}.csv')
+            spill_amp_sigma_err_df.to_csv(self.save_folder + f'/Spill error sigma amplitude run {single_run} board {board}.csv')
         
         elif param=='run':
             # 'empty' arrays to store the statistics of each channel
@@ -128,7 +148,7 @@ class Amplitude(ECAL):
             run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
 
             # save it in a .csv file
-            run_amp_df.to_csv(self.save_folder + f'Run amplitude run {single_run} board {board}.csv')
+            run_amp_df.to_csv(self.save_folder + f'/Run amplitude run {single_run} board {board}.csv')
         
         else: # TODO: throw exception
             print('wrong parameter, either spill or run')
@@ -142,13 +162,13 @@ class Amplitude(ECAL):
         
         # loading the file and returning it
         if param=='spill': # returns a tuple with the 4 files
-            return (pd.read_csv(self.save_folder + f'Spill mean amplitude run {single_run} board {board}.csv'),
-                pd.read_csv(self.save_folder + f'Spill error mean amplitude run {single_run} board {board}.csv'),
-                pd.read_csv(self.save_folder + f'Spill sigma amplitude run {single_run} board {board}.csv'),
-                pd.read_csv(self.save_folder + f'Spill error sigma amplitude run {single_run} board {board}.csv'))
+            return (pd.read_csv(self.save_folder + f'/Spill mean amplitude run {single_run} board {board}.csv'),
+                pd.read_csv(self.save_folder + f'/Spill error mean amplitude run {single_run} board {board}.csv'),
+                pd.read_csv(self.save_folder + f'/Spill sigma amplitude run {single_run} board {board}.csv'),
+                pd.read_csv(self.save_folder + f'/Spill error sigma amplitude run {single_run} board {board}.csv'))
         
         elif param=='run':
-            return pd.read_csv(self.save_folder + f'Run amplitude run {single_run} board {board}.csv')
+            return pd.read_csv(self.save_folder + f'/Run amplitude run {single_run} board {board}.csv')
         
         else:
             # TODO: throw exception
@@ -172,7 +192,7 @@ class Amplitude(ECAL):
         for i, number in enumerate(self.numbers):
             plt.errorbar(np.arange(num_spills), mean[slicing[i]], yerr=sigma[slicing[i]], label=board+number)
             
-        plt.xticks(1+np.arange(num_spills), 1+np.arange(num_spills)) # TODO: check
+        plt.xticks(np.arange(num_spills), 1+np.arange(num_spills)) # TODO: check
         plt.legend(loc='best')
         plt.title(f'Run {single_run}, board {board}, mean amplitude over spills')
         plt.xlabel('Spill')
