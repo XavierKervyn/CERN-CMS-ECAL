@@ -22,6 +22,7 @@
 -vérifier que le channel de référence est dans channel_names
 -lancer une exception dans statistics et plots variation si h5 pas encore généré
 -vérifier avec Pigazzini si variation_plot runs OK pour time delta
+-runs not sent to reco
 
 
 // SETTINGS
