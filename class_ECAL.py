@@ -60,4 +60,3 @@ class ECAL:
         for letter in self.letters:
             channel_names_temp = [letter + n for n in self.numbers]
             self.channel_names += channel_names_temp
-           
