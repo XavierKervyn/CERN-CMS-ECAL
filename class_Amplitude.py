@@ -93,10 +93,10 @@ class Amplitude(ECAL):
             spill_amp_sigma_err_df = pd.DataFrame(amp_sigma_err_spill, columns=col_list)
         
             # save these in .csv files
-            spill_amp_mean_df.to_csv(self.save_folder + f'Spill mean amplitude run {single_run} board {board}.csv')
-            spill_amp_mean_err_df.to_csv(self.save_folder + f'Spill error mean amplitude run {single_run} board {board}.csv')
-            spill_amp_sigma_df.to_csv(self.save_folder + f'Spill sigma amplitude run {single_run} board {board}.csv')
-            spill_amp_sigma_err_df.to_csv(self.save_folder + f'Spill error sigma amplitude run {single_run} board {board}.csv')
+            spill_amp_mean_df.to_csv(self.save_folder + f'/Spill mean amplitude run {single_run} board {board}.csv')
+            spill_amp_mean_err_df.to_csv(self.save_folder + f'/Spill error mean amplitude run {single_run} board {board}.csv')
+            spill_amp_sigma_df.to_csv(self.save_folder + f'/Spill sigma amplitude run {single_run} board {board}.csv')
+            spill_amp_sigma_err_df.to_csv(self.save_folder + f'/Spill error sigma amplitude run {single_run} board {board}.csv')
         
         elif param=='run':
             # 'empty' arrays to store the statistics of each channel
@@ -128,7 +128,7 @@ class Amplitude(ECAL):
             run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
 
             # save it in a .csv file
-            run_amp_df.to_csv(self.save_folder + f'Run amplitude run {single_run} board {board}.csv')
+            run_amp_df.to_csv(self.save_folder + f'/Run amplitude run {single_run} board {board}.csv')
         
         else: # TODO: throw exception
             print('wrong parameter, either spill or run')
@@ -142,13 +142,13 @@ class Amplitude(ECAL):
         
         # loading the file and returning it
         if param=='spill': # returns a tuple with the 4 files
-            return (pd.read_csv(self.save_folder + f'Spill mean amplitude run {single_run} board {board}.csv'),
-                pd.read_csv(self.save_folder + f'Spill error mean amplitude run {single_run} board {board}.csv'),
-                pd.read_csv(self.save_folder + f'Spill sigma amplitude run {single_run} board {board}.csv'),
-                pd.read_csv(self.save_folder + f'Spill error sigma amplitude run {single_run} board {board}.csv'))
+            return (pd.read_csv(self.save_folder + f'/Spill mean amplitude run {single_run} board {board}.csv'),
+                pd.read_csv(self.save_folder + f'/Spill error mean amplitude run {single_run} board {board}.csv'),
+                pd.read_csv(self.save_folder + f'/Spill sigma amplitude run {single_run} board {board}.csv'),
+                pd.read_csv(self.save_folder + f'/Spill error sigma amplitude run {single_run} board {board}.csv'))
         
         elif param=='run':
-            return pd.read_csv(self.save_folder + f'Run amplitude run {single_run} board {board}.csv')
+            return pd.read_csv(self.save_folder + f'/Run amplitude run {single_run} board {board}.csv')
         
         else:
             # TODO: throw exception
