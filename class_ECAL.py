@@ -358,7 +358,7 @@ class Time(ECAL):
                 value += clock_period
         return float(Decimal(value) % Decimal(clock_period))
     
-    
+
     def temperature_conversion(self, resistance):
         """ Takes resistance in Ohm. Returns temperature calculated from the measured resistance of the temperature sensor reader """
         nominal_resistance = 1000 # in Ohm
@@ -435,8 +435,8 @@ class Time(ECAL):
         plt.show()
 
         return time_delta_pd, mu_arr.reshape(-1,1), mu_error_arr.reshape(-1,1), sigma_arr.reshape(-1,1), sigma_error_arr.reshape(-1,1)
-    
 
+    
     def run_time_delta_computation_single_run(self, run_number):
         """ 
         Computes the time deltas for a single run. 
@@ -465,6 +465,7 @@ class Time(ECAL):
             with h5py.File(run_save + 'Statistics Split ' + self.split_name + f' ref_ch {ref_channel}.h5', 'w') as hf:
                 hf.create_dataset("stats",  data=statistics)
                 
+    
     def run_time_delta(self):
         """
         Plots the time delta histogram for every single run in the included_runs list (parent attribute)

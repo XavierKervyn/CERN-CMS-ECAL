@@ -41,3 +41,5 @@ Run: identify why laser power
 -15619: 150 (26) - max: 772.0
 -15621: 190 (156) - max: 8575.1
 
+// Monday week 2
+-15627: 180 (129) - max:
