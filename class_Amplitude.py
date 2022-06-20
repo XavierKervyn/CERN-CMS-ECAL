@@ -17,7 +17,7 @@ class Amplitude(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # GENERAL
     
-    def generate_stats(self, single_run, board, param, plot=False):
+    def __generate_stats(self, single_run, board, param='run', plot=False):
         # TODO: docstring
         
         folder =  self.raw_data_folder + str(int(single_run))
@@ -26,7 +26,8 @@ class Amplitude(ECAL):
         folder =  self.raw_data_folder + str(int(single_run))
         h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
         run_name = os.path.basename(os.path.normpath(folder)) # creating folder to save h5 file
-        print('Run: ', run_name, ' Split: ', self.split_name)
+        # TODO: delete print or add verbose boolean parameter?
+        print('Run: ', run_name)
         run_save = self.save_folder + '/Run ' + run_name + '/' + self.split_name + '/'
         Path(run_save).mkdir(parents=True, exist_ok=True) # folder created
         
@@ -94,7 +95,7 @@ class Amplitude(ECAL):
                         plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
                         plt.axvline(mu - sigma, color = sigma_color)
 
-                        plt.title(f'Run: {run_name}, Channel: {self.channel_names[i]}, Spill {spill}')
+                        plt.title(f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}')
                         plt.xlabel('Amplitude (??)')
                         plt.ylabel('Occurence (a.u.)')
                         plt.legend(loc='best')
@@ -128,7 +129,11 @@ class Amplitude(ECAL):
             for i, channel in enumerate(slicing):
                 border_size = 2000 # TODO: is not useful?
 
-                hist, bin_edges = np.histogram(amp_pd[channel], bins = 1500)
+                if plot:
+                    plt.figure()
+                    hist, bin_edges, _ = plt.hist(amp_pd[channel], bins = 1500, label="Amplitude Histogram")
+                else:
+                    hist, bin_edges = np.histogram(amp_pd[channel], bins = 1500)
 
                 bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
@@ -143,6 +148,21 @@ class Amplitude(ECAL):
                 mu_error_arr[i] = mu_error
                 sigma_arr[i] = sigma
                 sigma_error_arr[i] = sigma_error
+                
+                if plot:
+                        # plotting the histogram with a gaussian fit, the mean and the standard deviation
+                        plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
+                        plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
+                        sigma_color = 'pink'
+                        plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
+                        plt.axvline(mu - sigma, color = sigma_color)
+
+                        plt.title(f'Run: {run_name}, Channel: {board+self.numbers[i]}')
+                        plt.xlabel('Amplitude (??)')
+                        plt.ylabel('Occurence (a.u.)')
+                        plt.legend(loc='best')
+
+                        plt.show()
 
             # convert the arrays into a single Dataframe
             run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
@@ -153,12 +173,12 @@ class Amplitude(ECAL):
         else: # TODO: throw exception
             print('wrong parameter, either spill or run')
     
-    def load_stats(self, single_run, board, param):
+    def __load_stats(self, single_run, board, param):
         # TODO: docstring
         # TODO: throw exception or generate file if file does not exist
         
         # TODO: remove when exception implemented
-        self.generate_stats(single_run, board, param) # generating the statistics file
+        self.__generate_stats(single_run, board, param) # generating the statistics file
         
         # loading the file and returning it
         if param=='spill': # returns a tuple with the 4 files
@@ -178,11 +198,11 @@ class Amplitude(ECAL):
     # SPILLS
     
     # TODO should be private
-    def amplitude_spill_single_board(self, board, single_run): 
+    def __amplitude_spill_single_board(self, single_run, board): 
         # TODO: docstring
         
         # load the Dataframes
-        mean, mean_err, sigma, sigma_err = self.load_stats(single_run, board, 'spill')
+        mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, 'spill')
         num_spills = mean.shape[0] # number of spills in the single run
         
         slicing = [channel for channel in self.channel_names if channel[0] == board]
@@ -201,145 +221,68 @@ class Amplitude(ECAL):
     
     
     # TODO: should be private
-    def amplitude_spill_single_run(self, single_run):
+    def __amplitude_spill_single_run(self, single_run):
         # TODO: docstring
         for board in self.letters:
-            self.amplitude_spill_single_board(board, single_run)
+            self.__amplitude_spill_single_board(single_run, board)
     
     
     def variation_amplitude_spill(self):
         # TODO: docstring
         
         for single_run in self.included_runs:
-            self.amplitude_spill_single_run(single_run)  
+            self.__amplitude_spill_single_run(single_run)  
 
     # ------------------------------------------------------------------------------------------------------------------------------
     # RUNS
     
+    def __hist_amplitude_single_board(self, single_run, board):
+        # TODO: docstring
+        self.__generate_stats(single_run, board, 'run', True)
+        
     # TODO: should be private / shouldn't be accessed from outside
-    def run_amplitude_single_run(self, run_number):
-        """ 
-        Computes the amplitude for a single run. 
-        The splits are merged into a single big run number and the time deltas are saved in an h5 file.
-    
-        run_number -- (string or int) the number of a run, for example '15610'
-        """
-    
-        # Computation with merged data
-        folder =  self.raw_data_folder + str(int(run_number))
-        h = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
-    
-        run_name = os.path.basename(os.path.normpath(folder))
-        print('Run: ', run_name, ' Split: ', self.split_name)
-        run_save = self.save_folder + '/Run ' + run_name + '/' + self.split_name + '/'
-        Path(run_save).mkdir(parents=True, exist_ok=True)
-
-        amp = h['amp_max'] # retrieve the amplitude
-        amp_pd = pd.DataFrame(amp)
-    
-        # 'empty' arrays to store the statistics of each channel
-        mu_arr = np.zeros(len(self.channel_names))
-        mu_error_arr = np.zeros(len(self.channel_names))
-        sigma_arr = np.zeros(len(self.channel_names))
-        sigma_error_arr = np.zeros(len(self.channel_names))
-    
-        for i in range(len(self.channel_names)):
-            plt.figure()
-            border_size = 2000
-
-            hist, bin_edges, _ = plt.hist(amp_pd[i], bins = 1500, label= 'Amplitude Histogram')
-            bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
+    def __hist_amplitude_single_run(self, single_run):
+        # TODO: docstring
+        for board in self.letters:
+            self.__hist_amplitude_single_board(single_run, board)
         
-            # fitting process
-            guess = [np.max(hist), bin_centers[np.argmax(hist)], 3000]
-            coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
-            mu = coeff[1]
-            mu_error = covar[1,1]
-            sigma = coeff[2]
-            sigma_error = covar[2,2]
-            mu_arr[i] = mu
-            mu_error_arr[i] = mu_error
-            sigma_arr[i] = sigma
-            sigma_error_arr[i] = sigma_error
-        
-            # TODO: put correct units for amplitude
-            # plotting the histogram with a gaussian fit, the mean and the standard deviation
-            plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
-            plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ??', color = 'red')
-            sigma_color = 'pink'
-            plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ??', color = sigma_color)
-            plt.axvline(mu - sigma, color = sigma_color)
-        
-            plt.title(f'Run: {run_name}, Channel: {self.channel_names[i]}')
-            plt.xlabel('Amplitude (??)')
-            plt.ylabel('Occurence (a.u.)')
-            plt.legend(loc='best')
-            
-            plt.show()
-        
-        # saving the statistics in a file for later use, eg. in statistics_plot
-        statistics = np.hstack((mu_arr.reshape(-1,1), mu_error_arr.reshape(-1,1), 
-                                sigma_arr.reshape(-1,1), sigma_error_arr.reshape(-1,1)))
-        
-        with h5py.File(run_save + 'Statistics Split ' + self.split_name + '.h5', 'w') as hf:
-            hf.create_dataset("stats",  data=statistics)
-        
-
     # TODO: faire en sorte qu'une liste appelle mutliple et un entier seul appelle single
-    def run_amplitude(self):
+    def hist_amplitude(self):
         """
         Plots the histogram for every single run in the included_runs list (parent attribute)
         """
         for single_run in self.included_runs:
-            self.run_amplitude_single_run(single_run)
+            self.__hist_amplitude_single_run(single_run)
 
-    
-    def run_statistics_single_run(self, run_number):
-        """ 
-        Plots mu and sigma as well as their errors for the amplitude of a designated single run in a colormesh plot.
-        One has to have run the run_amplitude_computation function on the designated run first before using this function.
-    
-        run_number -- (string or int) The number of a run, for example '15484'
-        save_folder -- (string) Folder where the computed data should be stored
-        raw_data_folder -- (string) Folder where the raw experiment data is located
-        skip_mu == (boolean) If one is not interested in mu, one can skip plotting it
-        """
-    
-        stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
-        folder =  self.raw_data_folder + str(int(run_number))
-        run_name = os.path.basename(os.path.normpath(folder))
-        print('Run: ', run_name, ' Split: ', self.split_name)
-        run_save = self.save_folder + '/Run ' + str(run_name) + '/' + self.split_name + '/'
-        Path(run_save).mkdir(parents=True, exist_ok=True)
-
-        with h5py.File(run_save + 'Statistics Split ' + self.split_name + '.h5', 'r') as hf:
-            statistics = hf[f"stats"][:]
-
-        for i in range(len(statistics[0,:])):
-            plt.figure()
-            stat_data = statistics[:,i].reshape(len(self.letters), len(self.numbers))
-            c = plt.pcolormesh(self.X, self.Y, stat_data)
-            cb = plt.colorbar(c)
-            cb.set_label('Max amplitude over Channels (??)')
-            plt.title(f'{stat_names[i]}, Run: {run_name}, Split: {self.split_name}')
-            plt.show()
+    def __amplitude_run_single_board(self, board):
+        # TODO: docstring
         
-        plt.savefig(run_save + f'Stats Colormesh.pdf', dpi = 300)
-
+        # load the Dataframes     
+        mean = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma = np.zeros((len(self.included_runs), len(self.numbers)))
+        for i, single_run in enumerate(self.included_runs):
+            run_amp_df = self.__load_stats(single_run, board, 'run') # 4 columns, n_numbers rows
+            mean[i,:] = run_amp_df["mu"]
+            sigma[i,:] = run_amp_df["sigma"] 
         
-    def run_statistics(self):
-        """
-        Plots the colormesh map for every single run in the included_runs list (parent attribute)
-        """
-        for single_run in self.included_runs:
-            self.run_statistics_single_run(single_run)
-        print('-- Colormesh plot(s) finished --')
+        slicing = [channel for channel in self.channel_names if channel[0] == board]
         
+        # Plotting evolution for a single board
+        plt.figure()
+        for j, number in enumerate(self.numbers):
+            plt.errorbar(np.arange(len(self.included_runs)), mean[:,j], yerr=sigma[:,j], label=board+number)
+            
+        plt.xticks(np.arange(len(self.included_runs)), self.included_runs)
+        plt.legend(loc='best')
+        plt.title(f'Board {board}, mean amplitude over runs')
+        plt.xlabel('Run')
+        plt.ylabel('Amplitude (??)')
+        plt.show()
     
-    # TODO: write similar function to analyse the evolution(spills) for a single run
-    # TODO: test with a specific reference channel
+    # TODO: add specific channel
     # TODO: lancer une exception lorsque liste contient un seul run (pas d'évolution possible)
-    def variation_plot_runs(self, specific_ref_channel='all'):
+    def variation_amplitude_run(self):
+        # TODO: correct docstring
         """
         Plots the evolution of the mu and sigma statistics and their errors over a number of runs.
     
@@ -351,37 +294,49 @@ class Amplitude(ECAL):
         specific_ref_channel -- (string) If one wants to test the function only for a specific channel, use that channel here, 
         for example 'B3'
         """
+        for board in self.letters:
+            self.__amplitude_run_single_board(board)
     
-        for k, run_name in enumerate(self.included_runs):
-            run_save = self.save_folder + '/Run ' + str(run_name) + '/' + self.split_name + '/'
-            if k==0: # create the stacked_average_stats first
-                with h5py.File(run_save + 'Statistics Split ' + self.split_name + '.h5', 'r') as hf:
-                    stacked_average_stats = hf[f"stats"][:]
-            else: # then stack for each run included
-                with h5py.File(run_save + 'Statistics Split ' + self.split_name + '.h5', 'r') as hf:
-                    stacked_average_stats = np.dstack((stacked_average_stats, hf[f"stats"][:]))            
-            # stacked_average_stats has shape (n_channels, n_stats, n_runs)
+    def __run_statistics_single_run(self, single_run):
+        """ 
+        Plots mu and sigma as well as their errors for the amplitude of a designated single run in a colormesh plot.
+        One has to have run the run_amplitude_computation function on the designated run first before using this function.
     
-        # TODO: exception pour ce genre de pb
-        # now select a particular channel if given in specific_ref_channel
-        if specific_ref_channel != 'all':
-            if (specific_ref_channel not in self.channel_names):
-                print('specified channel given not in list, no particular channel selected')
-            else:
-                index = np.where(channel_names == specific_ref_channel)
-                stacked_average_stats = stacked_average_stats[index[0][0],:,:]
+        single_run -- (string or int) The number of a run, for example '15484'
+        save_folder -- (string) Folder where the computed data should be stored
+        raw_data_folder -- (string) Folder where the raw experiment data is located
+        skip_mu == (boolean) If one is not interested in mu, one can skip plotting it
+        """
     
-        for i, board in enumerate(self.letters): # one plot per board letter 'A', ...
-            plt.figure()
+        stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
+        folder =  self.raw_data_folder + str(int(single_run))
+        run_name = os.path.basename(os.path.normpath(folder))
+        print('Run: ', run_name)
+        run_save = self.save_folder + '/Run ' + str(run_name) + '/' + self.split_name + '/'
+        Path(run_save).mkdir(parents=True, exist_ok=True)
+
+        # TODO: do we also want to plot sigma, mu_err, sigma_err?
+        mean = np.zeros((len(self.letters), len(self.numbers)))
+        for i, board in enumerate(self.letters):
+            run_amp_df = self.__load_stats(single_run, board, 'run')
+            mean[i,:] = run_amp_df["mu"]
+        #with h5py.File(run_save + 'Statistics Split ' + self.split_name + '.h5', 'r') as hf:
+        #    statistics = hf[f"stats"][:]
+
+        plt.figure()
+        c = plt.pcolormesh(self.X, self.Y, mean)
+        cb = plt.colorbar(c)
+        cb.set_label('Max amplitude over Channels (??)')
+        plt.title(f'Mean, Run: {run_name}')
+        plt.show()
         
-            # one line plotted per channel 1, ..., 5 in each board
-            for j, nb in enumerate(self.numbers):
-                plt.errorbar(np.arange(len(self.included_runs)), stacked_average_stats[(5*i)+j,0,:],
-                             yerr=stacked_average_stats[(5*i)+j,2,:], label=self.channel_names[(5*i)+j])
-                plt.xticks(np.arange(len(self.included_runs)), self.included_runs)
-            
-            plt.legend(loc='best')
-            plt.title(f'Board {board}, mean amplitude over runs')
-            plt.xlabel('Run')
-            plt.ylabel('Amplitude (??)')
-            plt.show()
+        plt.savefig(run_save + f'Stats Colormesh.pdf', dpi = 300)
+
+        
+    def run_statistics(self):
+        """
+        Plots the colormesh map for every single run in the included_runs list (parent attribute)
+        """
+        for single_run in self.included_runs:
+            self.__run_statistics_single_run(single_run)
+        print('-- Colormesh plot(s) finished --')
