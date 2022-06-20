@@ -93,12 +93,12 @@ class Amplitude(ECAL):
             run_save = self.save_folder + '/Run ' + run_name + '/' + self.split_name + '/'
             Path(run_save).mkdir(parents=True, exist_ok=True)
 
-            slicing = [channel for channel in self.channel_names if channel[0] == board]
+            slicing = [channel for channel in self.channel_names if channel[0] == board] # Channels within the board
             
             amp = h2['amp_max'] # retrieve the amplitude
             amp_pd = pd.DataFrame(amp, columns=self.channel_names)[slicing]
             
-            aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
+            aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner') # TODO: write shape als comment
             
             # TODO: in a separate function?
             
