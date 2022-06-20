@@ -27,7 +27,6 @@
 -implement similar methods to compute amplitude delta
 -once method that check existence of h5 implemented, deploy in plots and colormesh to load h5 if already exists
 
-
 // SETTINGS
 Run: identify why laser power
 -15608: 50
