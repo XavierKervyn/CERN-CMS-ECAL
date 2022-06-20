@@ -23,6 +23,9 @@
 -throw an exception in statistics and plots variation if the h5 has not been generated yet
 -change variation plots: board vs same board and board across boards (ex C3 vs all other channels)
 -runs not sent to reco [EDIT: fixed]
+-add another way of computing the time delta in compute_time_delta, without synchronizer (ex. 3 gaussians)
+-implement similar methods to compute amplitude delta
+-once method that check existence of h5 implemented, deploy in plots and colormesh to load h5 if already exists
 
 
 // SETTINGS
