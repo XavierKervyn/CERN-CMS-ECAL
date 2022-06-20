@@ -15,7 +15,7 @@ class Time(ECAL):
          super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
     
     
-    def synchroniser(self, value):
+    def __synchroniser(self, value):
         """ Function to remove the period shift. Collects the scattered peaks separated by integer multiples of the clock period to one large peak """
         clock_period = 6.238 # nanoseconds    
         window_leniency = 0.5 # How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5
@@ -27,15 +27,15 @@ class Time(ECAL):
                 value += clock_period
         return float(Decimal(value) % Decimal(clock_period))
     
-
-    def temperature_conversion(self, resistance):
+    # TODO: delete? it is not used
+    def __temperature_conversion(self, resistance):
         """ Takes resistance in Ohm. Returns temperature calculated from the measured resistance of the temperature sensor reader """
         nominal_resistance = 1000 # in Ohm
         mean_coefficient = 3.91e-3 # in K^-1, for the plantinum resistance thermometer Pt1000
         return (np.abs(resistance - nominal_resistance))/(mean_coefficient * nominal_resistance)
     
     
-    def to_channel_converter(self, channel_number):
+    def __to_channel_converter(self, channel_number):
         """ Converts the channel number to the appropriate Channel. For example 7 -> 'B3'. """
         board_counter = 0
         while channel_number > 4:
@@ -44,7 +44,7 @@ class Time(ECAL):
         return f'{self.letters[board_counter]}{self.numbers[channel_number]}'
     
     
-    def compute_time_delta(self, time, reference_channel_index, run_name, plot=True, apply_synchroniser=True):
+    def __compute_time_delta(self, time, reference_channel_index, run_name, plot=True, apply_synchroniser=True):
         """ Computes the time difference (delta) for a given reference channel to all the other channels. 
         Also returns the mu and sigma statistics and their errors."""
         time_pd = pd.DataFrame(time)
@@ -65,7 +65,7 @@ class Time(ECAL):
 
             # Remove period shift from the data
             if apply_synchroniser: 
-                time_delta = time_delta.apply(self.synchroniser)
+                time_delta = time_delta.apply(self.__synchroniser)
 
             time_delta = time_delta.multiply(1000)
 
@@ -96,7 +96,7 @@ class Time(ECAL):
                 sigma_color = 'pink'
                 plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
                 plt.axvline(mu - sigma, color = sigma_color)
-                plt.title(f'Reference Channel: {self.to_channel_converter(reference_channel_index)}, Run: {run_name}, Channel {self.to_channel_converter(i)}')
+                plt.title(f'Reference Channel: {self.__to_channel_converter(reference_channel_index)}, Run: {run_name}, Channel {self.__to_channel_converter(i)}')
                 plt.xlabel('Time Delta (ps)')
                 plt.ylabel('Occurence (a.u.)')
                 plt.legend(loc='best')
@@ -106,7 +106,7 @@ class Time(ECAL):
         return time_delta_pd, mu_arr.reshape(-1,1), mu_error_arr.reshape(-1,1), sigma_arr.reshape(-1,1), sigma_error_arr.reshape(-1,1)
 
     
-    def run_time_delta_computation_single_run(self, run_number):
+    def __run_time_delta_computation_single_run(self, run_number):
         """ 
         Computes the time deltas for a single run. 
         The splits are merged into a single big run number and the time deltas are saved in an h5 file.
@@ -128,7 +128,7 @@ class Time(ECAL):
             time = h['time_max']
             time_pd = pd.DataFrame(time)
 
-            time_delta_data, mu_arr, mu_error_arr, sigma_arr, sigma_error_arr  = self.compute_time_delta(time, ref_idx, run_name)
+            time_delta_data, mu_arr, mu_error_arr, sigma_arr, sigma_error_arr  = self.__compute_time_delta(time, ref_idx, run_name)
             statistics = np.hstack((mu_arr, mu_error_arr, sigma_arr, sigma_error_arr))
             time_delta_data.to_hdf(run_save + f'Time Delta Run {run_name} ref_ch {ref_channel}.h5', key='df', mode='w')
             with h5py.File(run_save + 'Statistics Split ' + self.split_name + f' ref_ch {ref_channel}.h5', 'w') as hf:
@@ -140,10 +140,10 @@ class Time(ECAL):
         Plots the time delta histogram for every single run in the included_runs list (parent attribute)
         """
         for single_run in self.included_runs:
-            self.run_time_delta_computation_single_run(single_run)
+            self.__run_time_delta_computation_single_run(single_run)
         
     # TODO: avoid implicit dependence the previous one to get the statistics, hence check if h5 file exists    
-    def statistics_plot_single_run(self, run_number, skip_mu=False):
+    def __statistics_plot_single_run(self, run_number, skip_mu=False):
         """ 
         Plots mu and sigma as well as their errors for the time deltas of a designated run in a colormesh plot.
         One has to have run the run_time_delta_computation function on the designated run first before using this function.
@@ -174,14 +174,14 @@ class Time(ECAL):
                 cb.set_label('Deviation over Channels (ps)')
                 plt.title(f'{stat_names[i]}, Run: {run_name}, Split: {self.split_name}, Reference Channel: {ref_channel}')
                 plt.show()
-            plt.savefig(run_save + f'Stats Colormesh Ref Channel {self.to_channel_converter(k)}.pdf', dpi = 300)
+            plt.savefig(run_save + f'Stats Colormesh Ref Channel {self.__to_channel_converter(k)}.pdf', dpi = 300)
     
     def run_statistics(self, skip_mu=False):
         """
         Plots the colormesh map for every single run in the included_runs list (parent attribute)
         """
         for single_run in self.included_runs:
-            self.statistics_plot_single_run(single_run, skip_mu)
+            self.__statistics_plot_single_run(single_run, skip_mu)
     
     # TODO: check if works ok
     def variation_plot(self, measurement_name, measurement_date, mu_range = 2000, sigma_range = 150, specific_ref_channel='all'):
@@ -248,14 +248,14 @@ class Time(ECAL):
                     std_dev = np.std(stacked_average_stats[p, 2*k, :])
                     plt.errorbar(range(len(stacked_average_stats[0,0,:])), stacked_average_stats[p, 2*k, :],
                                  yerr = stacked_average_stats[p, 2*k+1, :],
-                                 label =f'Channel {self.to_channel_converter(p)}, Mean' + '{:.1e}'.format(mean) + ', Deviation:' + '{:.1e}'.format(std_dev))
+                                 label =f'Channel {self.__to_channel_converter(p)}, Mean' + '{:.1e}'.format(mean) + ', Deviation:' + '{:.1e}'.format(std_dev))
                     plt.legend(loc='best')
                     plt.title(f'{measurement_name}' + f' {stat}, Reference Channel: {ref_channel}')
 
                     plt.xticks(np.arange(len(self.included_runs)), map(str, range(1, len(self.included_runs) + 1)))
                     plt.xlabel(f'{measurement_name}' + ' Run')
                     plt.ylabel('Time (ps)')
-                    plt.savefig(variation_save + f'Variation Stats Board {self.letters[p//5]} Ref Channel {self.to_channel_converter(q)} {stat}.pdf', dpi = 300)
+                    plt.savefig(variation_save + f'Variation Stats Board {self.letters[p//5]} Ref Channel {self.__to_channel_converter(q)} {stat}.pdf', dpi = 300)
                 plt.show()
 
                 with h5py.File(self.plot_save_folder + '/' + f'{measurement_name}' + f' {measurement_date}' + ' Stats.h5', 'w') as hf:
@@ -312,5 +312,5 @@ class Time(ECAL):
                 cb = plt.colorbar(c)
                 cb.set_label('Deviation over Temperature (ps)')
                 plt.title('Temperature Variation' + '\n' +  f'{plot_titles[i]}, Reference Channel: {ref_channel}')
-                plt.savefig(variation_save + f'Variation Stats Colormesh {plot_titles[i]} Ref Channel {self.to_channel_converter(k)}.pdf', dpi = 300)      
+                plt.savefig(variation_save + f'Variation Stats Colormesh {plot_titles[i]} Ref Channel {self.__to_channel_converter(k)}.pdf', dpi = 300)      
                 plt.show()
