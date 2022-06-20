@@ -73,91 +73,90 @@ class Amplitude(ECAL):
                  plot_save_folder = plot_save_folder_global):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
     
-    def amplitude_spill_single_board(self, board): 
+    def amplitude_spill_single_board(self, board, single_run): 
         # TODO: docstring
-        for single_run in self.included_runs:
         
-            # Computation with merged data
-            folder =  self.raw_data_folder + str(int(single_run))
-            h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
+        # Computation with merged data
+        folder =  self.raw_data_folder + str(int(single_run))
+        h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
 
-            spill = h1['spill'] # retrieve the amplitude
-            spill_pd = pd.DataFrame(spill, columns=["spill_nb"])
+        spill = h1['spill'] # retrieve the amplitude
+        spill_pd = pd.DataFrame(spill, columns=["spill_nb"])
             
-            # Computation with merged data
-            folder =  self.raw_data_folder + str(int(single_run))
-            h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
+        # Computation with merged data
+        folder =  self.raw_data_folder + str(int(single_run))
+        h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
 
-            run_name = os.path.basename(os.path.normpath(folder))
-            print('Run: ', run_name, ' Split: ', self.split_name)
-            run_save = self.save_folder + '/Run ' + run_name + '/' + self.split_name + '/'
-            Path(run_save).mkdir(parents=True, exist_ok=True)
+        run_name = os.path.basename(os.path.normpath(folder))
+        print('Run: ', run_name, ' Split: ', self.split_name)
+        run_save = self.save_folder + '/Run ' + run_name + '/' + self.split_name + '/'
+        Path(run_save).mkdir(parents=True, exist_ok=True)
 
-            slicing = [channel for channel in self.channel_names if channel[0] == board]
+        slicing = [channel for channel in self.channel_names if channel[0] == board]
             
-            amp = h2['amp_max'] # retrieve the amplitude
-            amp_pd = pd.DataFrame(amp, columns=self.channel_names)[slicing]
+        amp = h2['amp_max'] # retrieve the amplitude
+        amp_pd = pd.DataFrame(amp, columns=self.channel_names)[slicing]
             
-            aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
+        aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
             
-            # TODO: in a separate function?
+        # TODO: in a separate function?
             
-            spill_set = set(aspill_pd["spill_nb"])
-            amp_mean_spill = np.zeros((len(spill_set), len(self.numbers)))
-            amp_mean_err_spill = np.zeros((len(spill_set), len(self.numbers)))
-            amp_sigma_spill = np.zeros((len(spill_set), len(self.numbers)))
-            amp_sigma_err_spill = np.zeros((len(spill_set), len(self.numbers)))
+        spill_set = set(aspill_pd["spill_nb"])
+        amp_mean_spill = np.zeros((len(spill_set), len(self.numbers)))
+        amp_mean_err_spill = np.zeros((len(spill_set), len(self.numbers)))
+        amp_sigma_spill = np.zeros((len(spill_set), len(self.numbers)))
+        amp_sigma_err_spill = np.zeros((len(spill_set), len(self.numbers)))
             
-            for j, spill in enumerate(spill_set):
-                aspill_pd_temp = aspill_pd[aspill_pd.spill_nb == spill]
+        for j, spill in enumerate(spill_set):
+            aspill_pd_temp = aspill_pd[aspill_pd.spill_nb == spill]
                 
-                # 'empty' arrays to store the statistics of each channel
-                mu_arr = np.zeros(len(self.numbers))
-                mu_error_arr = np.zeros(len(self.numbers))
-                sigma_arr = np.zeros(len(self.numbers))
-                sigma_error_arr = np.zeros(len(self.numbers))
+            # 'empty' arrays to store the statistics of each channel
+            mu_arr = np.zeros(len(self.numbers))
+            mu_error_arr = np.zeros(len(self.numbers))
+            sigma_arr = np.zeros(len(self.numbers))
+            sigma_error_arr = np.zeros(len(self.numbers))
                 
-                for i, channel in enumerate(slicing):
-                    # plt.figure() # TODO: see how to remove or if possible to remove
-                    border_size = 2000
+            for i, channel in enumerate(slicing):
+                # plt.figure() # TODO: see how to remove or if possible to remove
+                border_size = 2000
 
-                    # hist, bin_edges, _ = plt.hist(aspill_pd_temp[i], bins = 1500, label= 'Amplitude Histogram')
-                    hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
+                # hist, bin_edges, _ = plt.hist(aspill_pd_temp[i], bins = 1500, label= 'Amplitude Histogram')
+                hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
                     
-                    bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
+                bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
-                    # fitting process
-                    guess = [np.max(hist), bin_centers[np.argmax(hist)], 300]
-                    coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
-                    mu = coeff[1]
-                    mu_error = covar[1,1]
-                    sigma = coeff[2]
-                    sigma_error = covar[2,2]
-                    mu_arr[i] = mu
-                    mu_error_arr[i] = mu_error
-                    sigma_arr[i] = sigma
-                    sigma_error_arr[i] = sigma_error
-                amp_mean_spill[j,:] = mu_arr
-                amp_mean_err_spill[j,:] = mu_error_arr
-                amp_sigma_spill[j,:] = sigma_arr
-                amp_sigma_err_spill[j,:] = sigma_error_arr
+                # fitting process
+                guess = [np.max(hist), bin_centers[np.argmax(hist)], 300]
+                coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
+                mu = coeff[1]
+                mu_error = covar[1,1]
+                sigma = coeff[2]
+                sigma_error = covar[2,2]
+                mu_arr[i] = mu
+                mu_error_arr[i] = mu_error
+                sigma_arr[i] = sigma
+                sigma_error_arr[i] = sigma_error
+            amp_mean_spill[j,:] = mu_arr
+            amp_mean_err_spill[j,:] = mu_error_arr
+            amp_sigma_spill[j,:] = sigma_arr
+            amp_sigma_err_spill[j,:] = sigma_error_arr
             
-            # Plotting evolution for a single board
-            plt.figure()
-            for i, number in enumerate(self.numbers):
-                plt.errorbar(np.arange(len(spill_set)), amp_mean_spill[:,i], yerr=amp_sigma_spill[:,i], label=board+number)
+        # Plotting evolution for a single board
+        plt.figure()
+        for i, number in enumerate(self.numbers):
+            plt.errorbar(np.arange(len(spill_set)), amp_mean_spill[:,i], yerr=amp_sigma_spill[:,i], label=board+number)
             
-            plt.xticks(np.arange(len(spill_set)), spill_set)
-            plt.legend(loc='best')
-            plt.title(f'Run {single_run}, board {board}, mean amplitude over spills')
-            plt.xlabel('Spill')
-            plt.ylabel('Amplitude (??)')
-            plt.show()
+        plt.xticks(np.arange(len(spill_set)), spill_set)
+        plt.legend(loc='best')
+        plt.title(f'Run {single_run}, board {board}, mean amplitude over spills')
+        plt.xlabel('Spill')
+        plt.ylabel('Amplitude (??)')
+        plt.show()
         
     def amplitude_spill_single_run(self, single_run):
         # TODO: docstring
         for board in self.letters:
-            self.amplitude_spill_single_board(board)
+            self.amplitude_spill_single_board(board, single_run)
     
     def amplitude_spill(self):
         # TODO: docstring
