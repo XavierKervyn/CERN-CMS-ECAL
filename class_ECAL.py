@@ -592,7 +592,7 @@ class Time(ECAL):
                         hf.create_dataset("stats",  data=stats_ref_array)
 
     # TODO: che                    
-    def variation_statistics(measurement_name, measurement_date, colormesh_max=10, within_board_plot=True):
+    def variation_statistics(self, measurement_name, measurement_date, colormesh_max=10, within_board_plot=True):
         """ Plots the mu and sigma and their errors of a measurement over several runs in colormesh plots.
 
         measurement_name -- (string) Title of the measurement, for example power cycle or temperature
