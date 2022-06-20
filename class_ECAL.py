@@ -149,7 +149,7 @@ class Amplitude(ECAL):
             
             plt.xticks(np.arange(len(spill_set)), spill_set)
             plt.legend(loc='best')
-            plt.title(f'Board {board}, mean amplitude over spills')
+            plt.title(f'Run {single_run}, board {board}, mean amplitude over spills')
             plt.xlabel('Spill')
             plt.ylabel('Amplitude (??)')
             plt.show()
