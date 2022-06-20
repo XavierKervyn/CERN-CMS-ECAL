@@ -126,7 +126,7 @@ class Amplitude(ECAL):
                 bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
                 # fitting process
-                guess = [np.max(hist), bin_centers[np.argmax(hist)], 300]
+                guess = [np.max(hist), bin_centers[np.argmax(hist)], 100]
                 coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
                 mu = coeff[1]
                 mu_error = covar[1,1]
