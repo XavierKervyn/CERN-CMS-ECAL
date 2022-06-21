@@ -15,7 +15,7 @@ class Time(ECAL):
     raw_data_folder -- (string): folder where the .root input reconstruction files are stored
     plot_save_folder -- (string): folder where the plots produced are to be staved
     """
-    def __init__(self, included_runs, letters, # TODO: check if h5 file generated for the runs
+    def __init__(self, included_runs, letters,
                  save_folder = save_folder_global, raw_data_folder = raw_data_folder_global,
                  plot_save_folder = plot_save_folder_global):   
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
@@ -75,7 +75,7 @@ class Time(ECAL):
 
             reference_time = time_pd[ref_channel]
             curr_time = time_pd[channel]
-            time_delta = curr_time - reference_time # TODO: check sign
+            time_delta = curr_time - reference_time
 
             # Remove period shift from the data
             if apply_synchroniser: 
@@ -103,178 +103,177 @@ class Time(ECAL):
                            
         plot -- (bool): If True, plots the histograms and fit, not if False
         """
+        try:
+            if ref_channel not in self.channel_names:
+                raise ValueError("Reference channel must be in the channel list")
+            else:
+                # Computation with merged data
+                folder =  self.raw_data_folder + str(int(single_run))
+                h2 = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
 
-        # Computation with merged data
-        folder =  self.raw_data_folder + str(int(single_run))
-        h2 = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
+                run_name = os.path.basename(os.path.normpath(folder))
+                print('Run: ', run_name)
+                run_save = self.save_folder + '/Run ' + run_name + '/'
+                Path(run_save).mkdir(parents=True, exist_ok=True)
 
-        run_name = os.path.basename(os.path.normpath(folder))
-        print('Run: ', run_name)
-        run_save = self.save_folder + '/Run ' + run_name + '/'
-        Path(run_save).mkdir(parents=True, exist_ok=True)
-    
-        slicing = [channel for channel in self.channel_names if channel[0]==board]
-        
-        ref_idx = h2[ref_channel][0]
-        time = h2['time_max']
-        print(time)
-        time_pd = pd.DataFrame(time, columns=self.channel_names)
-        
-        # column header for the Dataframes
-        col_list = len(self.numbers)*[board]; col_list = [x + y for x,y in zip(col_list, self.numbers)]
-        
-        if param=='spill':
-            # Computation with merged data: retrieve the spill number
-            h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
-            spill = h1['spill'] 
-            spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
+                slicing = [channel for channel in self.channel_names if channel[0]==board]
 
-            # merge the two Dataframes
-            tspill_pd = pd.concat([time_pd, spill_pd], axis=1, join='inner')
-            
-            # create empty arrays to store the statistics
-            spill_set = set(tspill_pd["spill_nb"]) # set of unique spill numbers
-            time_mean_spill = np.zeros((len(spill_set), len(self.numbers)))
-            time_mean_err_spill = np.zeros((len(spill_set), len(self.numbers)))
-            time_sigma_spill = np.zeros((len(spill_set), len(self.numbers)))
-            time_sigma_err_spill = np.zeros((len(spill_set), len(self.numbers)))
-            
-            for j, spill in enumerate(spill_set):
-                tspill_pd_temp = tspill_pd[tspill_pd.spill_nb == spill]
-                
-                time_delta_pd = self.__compute_time_delta(tspill_pd_temp, board, ref_channel, apply_synchroniser=True)
-                
-                # 'empty' arrays to store the statistics of each channel
-                mu_arr = np.zeros(len(self.numbers))
-                mu_error_arr = np.zeros(len(self.numbers))
-                sigma_arr = np.zeros(len(self.numbers))
-                sigma_error_arr = np.zeros(len(self.numbers))
+                ref_idx = h2[ref_channel][0]
+                time = h2['time_max']
+                time_pd = pd.DataFrame(time, columns=self.channel_names)
 
-                for i, channel in enumerate(slicing):
-                    if channel == ref_channel:
-                        continue
-                    border_size = 2000 # TODO: is not useful?
-                    
-                    if plot:
-                        plt.figure()
-                        hist, bin_edges, _ = plt.hist(time_delta_pd[channel], bins = 1500, label="Amplitude Histogram")
-                    else:
-                        hist, bin_edges = np.histogram(time_delta_pd[channel], bins = 1500)
+                # column header for the Dataframes
+                col_list = len(self.numbers)*[board]; col_list = [x + y for x,y in zip(col_list, self.numbers)]
 
-                    bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
-                    
-                    # fitting process
-                    mean_guess = np.average(bin_centers, weights=hist)
-                    sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
+                if param=='spill':
+                    # Computation with merged data: retrieve the spill number
+                    h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
+                    spill = h1['spill'] 
+                    spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
 
-                    guess = [np.max(hist), mean_guess, sigma_guess]
-                    coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
-                    mu = coeff[1]
-                    mu_error = np.sqrt(covar[1,1])
-                    sigma = coeff[2]
-                    sigma_error = np.sqrt(covar[2,2])
-                    mu_arr[i] = mu
-                    mu_error_arr[i] = mu_error
-                    sigma_arr[i] = sigma
-                    sigma_error_arr[i] = sigma_error
-                    
-                    if plot:
-                        # plotting the histogram with a gaussian fit, the mean and the standard deviation
-                        plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
-                        plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
-                        sigma_color = 'pink'
-                        plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
-                        plt.axvline(mu - sigma, color = sigma_color)
+                    # merge the two Dataframes
+                    tspill_pd = pd.concat([time_pd, spill_pd], axis=1, join='inner')
 
-                        plt.title(f'Run: {run_name}, Ref: {ref_channel}, Channel: {board+self.numbers[i]}, Spill {spill}')
-                        plt.xlabel('Time delta (ps)')
-                        plt.ylabel('Occurence (a.u.)')
-                        plt.legend(loc='best')
+                    # create empty arrays to store the statistics
+                    spill_set = set(tspill_pd["spill_nb"]) # set of unique spill numbers
+                    time_mean_spill = np.zeros((len(spill_set), len(self.numbers)))
+                    time_mean_err_spill = np.zeros((len(spill_set), len(self.numbers)))
+                    time_sigma_spill = np.zeros((len(spill_set), len(self.numbers)))
+                    time_sigma_err_spill = np.zeros((len(spill_set), len(self.numbers)))
 
-                        plt.show()
-                    
-                time_mean_spill[j,:] = mu_arr
-                time_mean_err_spill[j,:] = mu_error_arr
-                time_sigma_spill[j,:] = sigma_arr
-                time_sigma_err_spill[j,:] = sigma_error_arr
-                
-            # convert the matrices to Dataframes
-            spill_time_mean_df = pd.DataFrame(time_mean_spill, columns=col_list)
-            spill_time_mean_err_df = pd.DataFrame(time_mean_err_spill, columns=col_list)
-            spill_time_sigma_df = pd.DataFrame(time_sigma_spill, columns=col_list)
-            spill_time_sigma_err_df = pd.DataFrame(time_sigma_err_spill, columns=col_list)
-        
-            # save these in .csv files
-            spill_time_mean_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                      + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv')
-            spill_time_mean_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                          + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv')
-            spill_time_sigma_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                       + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
-            spill_time_sigma_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                           + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
-                
-        elif param=='run':
-            time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser=True)
-            
-            # 'empty' arrays to store the statistics of each channel
-            mu_arr = np.zeros(len(self.numbers))
-            mu_error_arr = np.zeros(len(self.numbers))
-            sigma_arr = np.zeros(len(self.numbers))
-            sigma_error_arr = np.zeros(len(self.numbers))
+                    for j, spill in enumerate(spill_set):
+                        tspill_pd_temp = tspill_pd[tspill_pd.spill_nb == spill]
 
-            for i, channel in enumerate(slicing):
-                if channel == ref_channel:
-                    continue
-                border_size = 2000 # TODO: is not useful?
+                        time_delta_pd = self.__compute_time_delta(tspill_pd_temp, board, ref_channel, apply_synchroniser=True)
 
-                if plot:
-                    plt.figure()
-                    hist, bin_edges, _ = plt.hist(time_delta_pd[channel], bins = 1500, label="Amplitude Histogram")
-                else:
-                    hist, bin_edges = np.histogram(time_delta_pd[channel], bins = 1500)
+                        # 'empty' arrays to store the statistics of each channel
+                        mu_arr = np.zeros(len(self.numbers))
+                        mu_error_arr = np.zeros(len(self.numbers))
+                        sigma_arr = np.zeros(len(self.numbers))
+                        sigma_error_arr = np.zeros(len(self.numbers))
 
-                bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
+                        for i, channel in enumerate(slicing):
+                            if channel == ref_channel:
+                                continue
 
-                # fitting process
-                mean_guess = np.average(bin_centers, weights=hist)
-                sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
+                            if plot:
+                                plt.figure()
+                                hist, bin_edges, _ = plt.hist(time_delta_pd[channel], bins = 1500, label="Amplitude Histogram")
+                            else:
+                                hist, bin_edges = np.histogram(time_delta_pd[channel], bins = 1500)
 
-                guess = [np.max(hist), mean_guess, sigma_guess]
-                coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
-                mu = coeff[1]
-                mu_error = np.sqrt(covar[1,1])
-                sigma = coeff[2]
-                sigma_error = np.sqrt(covar[2,2])
-                mu_arr[i] = mu
-                mu_error_arr[i] = mu_error
-                sigma_arr[i] = sigma
-                sigma_error_arr[i] = sigma_error
-                
-                if plot:
-                        # plotting the histogram with a gaussian fit, the mean and the standard deviation
-                        plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
-                        plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
-                        sigma_color = 'pink'
-                        plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
-                        plt.axvline(mu - sigma, color = sigma_color)
+                            bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
 
-                        plt.title(f'Run: {run_name}, Ref: {ref_channel}, Channel: {board+self.numbers[i]}')
-                        plt.xlabel('Time delta (ps)')
-                        plt.ylabel('Occurence (a.u.)')
-                        plt.legend(loc='best')
+                            # fitting process
+                            mean_guess = np.average(bin_centers, weights=hist)
+                            sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
 
-                        plt.show()
+                            guess = [np.max(hist), mean_guess, sigma_guess]
+                            coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                            mu = coeff[1]
+                            mu_error = np.sqrt(covar[1,1])
+                            sigma = coeff[2]
+                            sigma_error = np.sqrt(covar[2,2])
+                            mu_arr[i] = mu
+                            mu_error_arr[i] = mu_error
+                            sigma_arr[i] = sigma
+                            sigma_error_arr[i] = sigma_error
 
-            # convert the arrays into a single Dataframe
-            run_time_delta_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
+                            if plot:
+                                # plotting the histogram with a gaussian fit, the mean and the standard deviation
+                                plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
+                                plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
+                                sigma_color = 'pink'
+                                plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
+                                plt.axvline(mu - sigma, color = sigma_color)
 
-            # save it in a .csv file
-            run_time_delta_df.to_csv(self.save_folder + f'/Run {single_run}' + 
-                                     f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
-        
-        else: # TODO: throw exception
-            print('wrong parameter, either spill or run')
+                                plt.title(f'Run: {run_name}, Ref: {ref_channel}, Channel: {board+self.numbers[i]}, Spill {spill}')
+                                plt.xlabel('Time delta (ps)')
+                                plt.ylabel('Occurence (a.u.)')
+                                plt.legend(loc='best')
+
+                                plt.show()
+
+                        time_mean_spill[j,:] = mu_arr
+                        time_mean_err_spill[j,:] = mu_error_arr
+                        time_sigma_spill[j,:] = sigma_arr
+                        time_sigma_err_spill[j,:] = sigma_error_arr
+
+                    # convert the matrices to Dataframes
+                    spill_time_mean_df = pd.DataFrame(time_mean_spill, columns=col_list)
+                    spill_time_mean_err_df = pd.DataFrame(time_mean_err_spill, columns=col_list)
+                    spill_time_sigma_df = pd.DataFrame(time_sigma_spill, columns=col_list)
+                    spill_time_sigma_err_df = pd.DataFrame(time_sigma_err_spill, columns=col_list)
+
+                    # save these in .csv files
+                    spill_time_mean_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                              + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv')
+                    spill_time_mean_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                                  + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv')
+                    spill_time_sigma_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                               + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
+                    spill_time_sigma_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                                   + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
+
+                elif param=='run':
+                    time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser=True)
+
+                    # 'empty' arrays to store the statistics of each channel
+                    mu_arr = np.zeros(len(self.numbers))
+                    mu_error_arr = np.zeros(len(self.numbers))
+                    sigma_arr = np.zeros(len(self.numbers))
+                    sigma_error_arr = np.zeros(len(self.numbers))
+
+                    for i, channel in enumerate(slicing):
+                        if channel == ref_channel:
+                            continue
+
+                        if plot:
+                            plt.figure()
+                            hist, bin_edges, _ = plt.hist(time_delta_pd[channel], bins = 1500, label="Amplitude Histogram")
+                        else:
+                            hist, bin_edges = np.histogram(time_delta_pd[channel], bins = 1500)
+
+                        bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
+
+                        # fitting process
+                        mean_guess = np.average(bin_centers, weights=hist)
+                        sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
+
+                        guess = [np.max(hist), mean_guess, sigma_guess]
+                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                        mu = coeff[1]
+                        mu_error = np.sqrt(covar[1,1])
+                        sigma = coeff[2]
+                        sigma_error = np.sqrt(covar[2,2])
+                        mu_arr[i] = mu
+                        mu_error_arr[i] = mu_error
+                        sigma_arr[i] = sigma
+                        sigma_error_arr[i] = sigma_error
+
+                        if plot:
+                                # plotting the histogram with a gaussian fit, the mean and the standard deviation
+                                plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
+                                plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
+                                sigma_color = 'pink'
+                                plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
+                                plt.axvline(mu - sigma, color = sigma_color)
+
+                                plt.title(f'Run: {run_name}, Ref: {ref_channel}, Channel: {board+self.numbers[i]}')
+                                plt.xlabel('Time delta (ps)')
+                                plt.ylabel('Occurence (a.u.)')
+                                plt.legend(loc='best')
+
+                                plt.show()
+
+                    # convert the arrays into a single Dataframe
+                    run_time_delta_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
+
+                    # save it in a .csv file
+                    run_time_delta_df.to_csv(self.save_folder + f'/Run {single_run}' + 
+                                             f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
+        except ValueError as e:
+            print(e)
             
             
     def __load_stats(self, single_run, board, ref_channel, param):
@@ -461,7 +460,7 @@ class Time(ECAL):
         plt.ylabel('Time delta (ps)')
         plt.show()
     
-    # TODO: lancer une exception lorsque liste contient un seul run (pas d'évolution possible)
+
     def variation_time_delta_run(self, ref_channel, all_channels):
         """
         Plots the evolution over the runs in self.included_runs of the time delta of the channels with respect to the ref_channel on one or all the boards, depending on the value of all_channels.
@@ -469,13 +468,18 @@ class Time(ECAL):
         ref_channel -- (string): reference channel with respect to which the differences are computed
         all_channels -- (bool): If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         """
-        if all_channels:
-            for board in self.letters:
-                self.__time_delta_run_single_board(board, ref_channel)
-        else:
-            board = ref_channel[0]
-            self.__time_delta_run_single_board(board, ref_channel)
-            
+        try:
+            if len(self.included_runs) <= 1:
+                raise ValueError("Need at least two runs to plot a variation")
+            else:
+                if all_channels:
+                    for board in self.letters:
+                        self.__time_delta_run_single_board(board, ref_channel)
+                else:
+                    board = ref_channel[0]
+                    self.__time_delta_run_single_board(board, ref_channel)
+        except ValueError as e:
+            print(e)
     
     # ---- STATISTICS OVER RUNS ----
     def __run_statistics_single_run(self, single_run, ref_channel):
