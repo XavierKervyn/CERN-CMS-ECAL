@@ -16,7 +16,8 @@ class Time(ECAL):
     
     
     def __synchroniser(self, value):
-        """ Function to remove the period shift. Collects the scattered peaks separated by integer multiples of the clock period to one large peak """
+        """ Function to remove the period shift. 
+        Collects the scattered peaks separated by integer multiples of the clock period to one large peak """
         clock_period = 6.238 # nanoseconds    
         window_leniency = 0.5 # How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5
         if value > 0:
