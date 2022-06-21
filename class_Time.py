@@ -205,10 +205,14 @@ class Time(ECAL):
             spill_time_sigma_err_df = pd.DataFrame(time_sigma_err_spill, columns=col_list)
         
             # save these in .csv files
-            spill_time_mean_df.to_csv(self.save_folder + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv')
-            spill_time_mean_err_df.to_csv(self.save_folder + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv')
-            spill_time_sigma_df.to_csv(self.save_folder + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
-            spill_time_sigma_err_df.to_csv(self.save_folder + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
+            spill_time_mean_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                      + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv')
+            spill_time_mean_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                          + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv')
+            spill_time_sigma_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                       + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
+            spill_time_sigma_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                           + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
                 
         elif param=='run':
             time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser=True)
@@ -266,7 +270,8 @@ class Time(ECAL):
             run_time_delta_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
 
             # save it in a .csv file
-            run_time_delta_df.to_csv(self.save_folder + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
+            run_time_delta_df.to_csv(self.save_folder + f'/Run {single_run}' + 
+                                     f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
         
         else: # TODO: throw exception
             print('wrong parameter, either spill or run')
@@ -283,24 +288,40 @@ class Time(ECAL):
         param -- (string): either 'run' or 'spill'. If 'run', loads the statistics for the entire run, 
                            if 'spill' loads the statistics for each spill.
         """
-        # TODO: throw exception or generate file if file does not exist
+        try: # check if the file exists
+            
+            if param=='spill': # returns a tuple with the 4 files
+                return (pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                    + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                    pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                    pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                    pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv'))
+            elif param=='run':
+                return pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                   + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
+        except FileNotFoundError:
+            print('File not found, generating .csv')
+            self.__generate_stats(single_run, board, ref_channel, param) # generating the statistics file
+            
+            # loading the file and returning it
+            if param=='spill': # returns a tuple with the 4 files
+                return (pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                    + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                    pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                    pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                    pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv'))
+            elif param=='run':
+                return pd.read_csv(self.save_folder + f'/Run {single_run}' 
+                                   + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
         
-        # TODO: remove when exception implemented
-        self.__generate_stats(single_run, board, ref_channel, param) # generating the statistics file
-        
-        # loading the file and returning it
-        if param=='spill': # returns a tuple with the 4 files
-            return (pd.read_csv(self.save_folder + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
-                pd.read_csv(self.save_folder + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
-                pd.read_csv(self.save_folder + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv'),
-                pd.read_csv(self.save_folder + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv'))
-        
-        elif param=='run':
-            return pd.read_csv(self.save_folder + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
-        
-        else:
-            # TODO: throw exception
-            print('wrong parameter, either spill/run')
+        except: 
+            raise Exception('Could not load nor generate .csv file')
 
             
     # ------------------------------------------------------------------------------------------------------------------------------
