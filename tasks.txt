@@ -26,6 +26,7 @@
 -add another way of computing the time delta in compute_time_delta, without synchronizer (ex. 3 gaussians)
 -implement similar methods to compute amplitude delta
 -once method that check existence of h5 implemented, deploy in plots and colormesh to load h5 if already exists
+-transpose color mesh?
 
 // SETTINGS
 Run: identify why laser power
