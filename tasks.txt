@@ -8,8 +8,6 @@
 -check if .csv file generated in load() to avoid generating it twice
 -argparse
 -DAQ: knowing when the run is finished
--throw exception argument of Time or Amplitude is not a list of int
--throw an exception when a list only has a single run for variation methods that require many runs
 -check that the reference channel is included in channel_names
 -add another way of computing the time delta in compute_time_delta, without synchronizer (ex. 3 gaussians)
 -transpose color mesh?
