@@ -13,6 +13,7 @@
 -check that the reference channel is included in channel_namest
 -add another way of computing the time delta in compute_time_delta, without synchronizer (ex. 3 gaussians)
 -transpose color mesh?
+-update README
 
 // SETTINGS
 Run: identify why laser power
@@ -36,5 +37,5 @@ Run: identify why laser power
 -15629: 179
 
 // Tueday week 2: laser power range: 140:005:220
-- 15639: 140
+- 15650: 140
 ... 15655
