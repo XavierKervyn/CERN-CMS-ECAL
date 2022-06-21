@@ -82,9 +82,9 @@ class Amplitude(ECAL):
                     guess = [np.max(hist), mean_guess, sigma_guess]
                     coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
                     mu = coeff[1]
-                    mu_error = covar[1,1]
+                    mu_error = np.sqrt(covar[1,1])
                     sigma = coeff[2]
-                    sigma_error = covar[2,2]
+                    sigma_error = np.sqrt(covar[2,2])
                     mu_arr[i] = mu
                     mu_error_arr[i] = mu_error
                     sigma_arr[i] = sigma
@@ -147,9 +147,9 @@ class Amplitude(ECAL):
                 guess = [np.max(hist), mean_guess, sigma_guess]
                 coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
                 mu = coeff[1]
-                mu_error = covar[1,1]
+                mu_error = np.sqrt(covar[1,1])
                 sigma = coeff[2]
-                sigma_error = covar[2,2]
+                sigma_error = np.sqrt(covar[2,2])
                 mu_arr[i] = mu
                 mu_error_arr[i] = mu_error
                 sigma_arr[i] = sigma
@@ -334,8 +334,6 @@ class Amplitude(ECAL):
         cb.set_label('Max amplitude over Channels (??)')
         plt.title(f'Mean, Run: {run_name}')
         plt.show()
-        
-        plt.savefig(run_save + f'Stats Colormesh.pdf', dpi = 300)
 
         
     def run_statistics(self):

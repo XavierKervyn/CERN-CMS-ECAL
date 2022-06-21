@@ -3,29 +3,15 @@
 -implement a way of generating plots in an automatic fashion
 
 // TASKS:
--adapt board: nombre de boards actives?
--attribution des boards 'A', 'C', ect. quand on n'a qu'une seule board active?
-
 -change units for amplitude
--throw exception if runs in the list included_runs are not cohrent (not the same boards)
--check save paths for statistics
--check save paths for plots
+-throw exception if runs in the list included_runs are not coherent (not the same boards)
 -check if h5 file generated to avoid generating it twice
 -argparse
--standard dev = sqrt(variance)
--new method: evolution(spill) for a given run
 -DAQ: knowing when the run is finished
--set single methods to private
 -throw exception argument of Time or Amplitude is not a list of int
--test variation_plot_runs with a specific channel
 -throw an exception when a list only has a single run for variation methods that require many runs
--check that the reference channel is included in channel_names
--throw an exception in statistics and plots variation if the h5 has not been generated yet
--change variation plots: board vs same board and board across boards (ex C3 vs all other channels)
--runs not sent to reco [EDIT: fixed]
+-check that the reference channel is included in channel_namest
 -add another way of computing the time delta in compute_time_delta, without synchronizer (ex. 3 gaussians)
--implement similar methods to compute amplitude delta
--once method that check existence of h5 implemented, deploy in plots and colormesh to load h5 if already exists
 -transpose color mesh?
 
 // SETTINGS

@@ -122,9 +122,9 @@ class Amplitude_Delta(ECAL):
                     guess = [np.max(hist), mean_guess, sigma_guess]
                     coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
                     mu = coeff[1]
-                    mu_error = covar[1,1]
+                    mu_error = np.sqrt(covar[1,1])
                     sigma = coeff[2]
-                    sigma_error = covar[2,2]
+                    sigma_error = np.sqrt(covar[2,2])
                     mu_arr[i] = mu
                     mu_error_arr[i] = mu_error
                     sigma_arr[i] = sigma
@@ -191,9 +191,9 @@ class Amplitude_Delta(ECAL):
                 guess = [np.max(hist), mean_guess, sigma_guess]
                 coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
                 mu = coeff[1]
-                mu_error = covar[1,1]
+                mu_error = np.sqrt(covar[1,1])
                 sigma = coeff[2]
-                sigma_error = covar[2,2]
+                sigma_error = np.sqrt(covar[2,2])
                 mu_arr[i] = mu
                 mu_error_arr[i] = mu_error
                 sigma_arr[i] = sigma
