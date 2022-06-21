@@ -339,4 +339,3 @@ class Amplitude(ECAL):
         """
         for single_run in self.included_runs:
             self.__run_statistics_single_run(single_run)
-        print('-- Colormesh plot(s) finished --')
