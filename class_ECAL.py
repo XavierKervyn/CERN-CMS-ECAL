@@ -18,8 +18,14 @@ save_folder_global = 'Synchronisation' # Processed data from will be stored in a
 raw_data_folder_global = '/eos/home-s/spigazzi/Lab21/data/Reco/' # Raw data is stored here
 plot_save_folder_global = 'Variation Stats ' # Produced plots are saved here
 
-# useful for the gaussian fit
+
 def gaussian(x, *p):
+    """
+    Returns a gaussian function with amplitude A, mean mu and std deviation sigma evaluated at x
+    
+    x --- (float): point at which the function is evaluated
+    p --- (tuple of int): parameters of the gaussian; amplitude, mean, std deviation
+    """
     A, mu, sigma = p
     return A * np.exp(-(x -mu)**2/(2*sigma**2))
 
@@ -27,17 +33,19 @@ def gaussian(x, *p):
 
 # TODO: check consistency of the different runs (same boards), raise error if not consistent
 class ECAL:
+    """
+    parent class of Amplitude, Time and Amplitude_Delta
+    
+    included_runs --- (list of int) run numbers to be analysed, eg. [15610, 15611]
+    letters --- (list of strings) corresponding to the boards connected, eg. ['A', 'B', 'D']
+    save_folder --- (string) folder where the computed data should be stored
+    raw_data_folder --- (string) folder where the raw experiment data is located
+    plot_save_folder --- (string) folder where the plots are saved
+    """
+    
     def __init__(self, included_runs, letters, 
                  save_folder = save_folder_global, raw_data_folder = raw_data_folder_global, 
                  plot_save_folder = plot_save_folder_global):
-        """
-        included_runs -- (list) run numbers (int) to be analysed
-        letters -- (list) of letters (strings) corresponding to the boards connected
-        save_folder -- (string) folder where the computed data should be stored
-        raw_data_folder -- (string) folder where the raw experiment data is located
-        plot_save_folder -- (string) folder where the plots are saved
-        """
-        
         self.save_folder = save_folder
         self.raw_data_folder = raw_data_folder
         self.plot_save_folder = plot_save_folder
@@ -48,7 +56,7 @@ class ECAL:
         # Obsolete otherwise, split_name could be removed everywhere 
 
         self.numbers = ['1', '2', '3', '4', '5'] # The five channels on each board
-        self.included_runs = included_runs # all runs to be processed
+        self.included_runs = included_runs
         self.letters = letters
         
         # for colormesh plots
