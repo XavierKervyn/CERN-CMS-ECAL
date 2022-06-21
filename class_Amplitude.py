@@ -14,7 +14,7 @@ class Amplitude(ECAL):
     raw_data_folder --- (string): local path to the folder where the data from DQM is sent
     plot_save_folder --- (string): local path to the folder where the plots can be saved
     """
-    def __init__(self, included_runs, letters, # TODO: check if h5 file generated for the runs
+    def __init__(self, included_runs, letters,
                  save_folder = save_folder_global, raw_data_folder = raw_data_folder_global,
                  plot_save_folder = plot_save_folder_global):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
@@ -37,7 +37,7 @@ class Amplitude(ECAL):
         # Computation with merged data: retrieve the amplitude
         folder =  self.raw_data_folder + str(int(single_run))
         h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
-        run_name = os.path.basename(os.path.normpath(folder)) # creating folder to save h5 file
+        run_name = os.path.basename(os.path.normpath(folder)) # creating folder to save csv file
         # TODO: delete print or add verbose boolean parameter?
         print('Run: ', run_name)
         run_save = self.save_folder + '/Run ' + run_name + '/'
@@ -76,9 +76,7 @@ class Amplitude(ECAL):
                 sigma_arr = np.zeros(len(self.numbers))
                 sigma_error_arr = np.zeros(len(self.numbers))
 
-                for i, channel in enumerate(slicing):
-                    border_size = 2000 # TODO: useful?
-                    
+                for i, channel in enumerate(slicing):         
                     if plot: # plots an histogram if True
                         plt.figure()
                         hist, bin_edges, _ = plt.hist(aspill_pd_temp[channel], bins = 1500, label="Amplitude Histogram")
@@ -150,8 +148,6 @@ class Amplitude(ECAL):
             sigma_error_arr = np.zeros(len(self.numbers))
 
             for i, channel in enumerate(slicing):
-                border_size = 2000 # TODO: useful?
-
                 if plot:
                     plt.figure()
                     hist, bin_edges, _ = plt.hist(amp_pd[channel], bins = 1500, label="Amplitude Histogram")
@@ -199,9 +195,6 @@ class Amplitude(ECAL):
             # save it in a single .csv file per tuple (run, board)
             run_amp_df.to_csv(self.save_folder + f'/Run {single_run}' 
                               + f'/Run amplitude run {single_run} board {board}.csv')
-        
-        else: # TODO: throw exception
-            print('wrong parameter, either spill or run')
     
     
     def __load_stats(self, single_run, board, param):
@@ -272,7 +265,7 @@ class Amplitude(ECAL):
         for i, number in enumerate(self.numbers):
             plt.errorbar(np.arange(num_spills), mean[slicing[i]], yerr=sigma[slicing[i]], label=board+number)
             
-        plt.xticks(np.arange(num_spills), 1+np.arange(num_spills)) # TODO: check
+        plt.xticks(np.arange(num_spills), 1+np.arange(num_spills))
         plt.legend(loc='best')
         plt.title(f'Run {single_run}, board {board}, mean amplitude over spills')
         plt.xlabel('Spill')
@@ -340,7 +333,7 @@ class Amplitude(ECAL):
         # empty matrices to store the statistics     
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
-        #load the DataFrames and fill the matrices
+        # load the DataFrames and fill the matrices
         for i, single_run in enumerate(self.included_runs):
             run_amp_df = self.__load_stats(single_run, board, 'run') # 4 columns, n_numbers rows
             mean[i,:] = run_amp_df["mu"]
@@ -349,7 +342,7 @@ class Amplitude(ECAL):
         # keep only the channels of the board we are interested in
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
-        # Plot the evolution for a single board
+        # plot the evolution for a single board
         plt.figure()
         for j, number in enumerate(self.numbers):
             plt.errorbar(np.arange(len(self.included_runs)), mean[:,j], yerr=sigma[:,j], label=board+number)
@@ -362,14 +355,19 @@ class Amplitude(ECAL):
         plt.show()
     
 
-    # TODO: lancer une exception lorsque liste contient un seul run (pas d'évolution possible)
     def variation_amplitude_run(self):
         """
         Plots the evolution of the mean amplitude over every single_run in self.included_runs.
         Warning: included_runs must be at least of length two.
         """
-        for board in self.letters:
-            self.__amplitude_run_single_board(board)
+        try:
+            if len(self.included_runs)  <= 1:
+                raise ValueError('Need at least two runs to plot a variation')
+            else:    
+                for board in self.letters:
+                    self.__amplitude_run_single_board(board)
+        except ValueError as e:
+            print(e)
     
 
     # ---- STATISTICS OVER RUNS ----

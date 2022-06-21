@@ -22,6 +22,9 @@ https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/blob/master/ec
 -save images in png and pdf
 
 
+Name of the exceptions:
+VariationError: included_runs has <= 1 single_runs, impossible to plot variation
+
 // SETTINGS
 Run: identify why laser power
 -15608: 50
