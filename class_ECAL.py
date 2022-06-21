@@ -14,9 +14,9 @@ from pathlib import Path
 
 """ Global variables """
 
-save_folder_global = 'Synchronisation' # Processed data from will be stored in a folder named like this. 
+save_folder_global = 'Statistics' # Processed data from will be stored in a folder named like this. 
 raw_data_folder_global = '/eos/home-s/spigazzi/Lab21/data/Reco/' # Raw data is stored here
-plot_save_folder_global = 'Variation Stats ' # Produced plots are saved here
+plot_save_folder_global = 'Plots' # Produced plots are saved here
 
 
 def gaussian(x, *p):
@@ -49,11 +49,6 @@ class ECAL:
         self.save_folder = save_folder
         self.raw_data_folder = raw_data_folder
         self.plot_save_folder = plot_save_folder
-        
-        self.split_name = 'Merged' 
-        # Needed for legacy support, namely to be able to run the statistics_plot and variation plot functions 
-        # on the data files from January 2022 with 'Merged in their name'. 
-        # Obsolete otherwise, split_name could be removed everywhere 
 
         self.numbers = ['1', '2', '3', '4', '5'] # The five channels on each board
         self.included_runs = included_runs
