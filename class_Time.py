@@ -109,8 +109,8 @@ class Time(ECAL):
         h2 = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
 
         run_name = os.path.basename(os.path.normpath(folder))
-        print('Run: ', run_name, ' Split: ', self.split_name)
-        run_save = self.save_folder + '/Run ' + run_name + '/' + self.split_name + '/'
+        print('Run: ', run_name)
+        run_save = self.save_folder + '/Run ' + run_name + '/'
         Path(run_save).mkdir(parents=True, exist_ok=True)
     
         slicing = [channel for channel in self.channel_names if channel[0]==board]
@@ -470,7 +470,7 @@ class Time(ECAL):
         folder =  self.raw_data_folder + str(int(single_run))
         run_name = os.path.basename(os.path.normpath(folder))
         print('Run: ', run_name)
-        run_save = self.save_folder + '/Run ' + str(run_name) + '/' + self.split_name + '/'
+        run_save = self.save_folder + '/Run ' + str(run_name) + '/'
         Path(run_save).mkdir(parents=True, exist_ok=True)
 
         # TODO: do we also want to plot sigma, mu_err, sigma_err?
