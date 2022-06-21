@@ -76,7 +76,10 @@ class Amplitude(ECAL):
                     bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
                     # fitting process
-                    guess = [np.max(hist), bin_centers[np.argmax(hist)], 100]
+                    mean_guess = np.average(bin_centers, weights=hist)
+                    sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
+
+                    guess = [np.max(hist), mean_guess, sigma_guess]
                     coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
                     mu = coeff[1]
                     mu_error = covar[1,1]
@@ -138,7 +141,10 @@ class Amplitude(ECAL):
                 bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
                 # fitting process
-                guess = [np.max(hist), bin_centers[np.argmax(hist)], 100]
+                mean_guess = np.average(bin_centers, weights=hist)
+                sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
+
+                guess = [np.max(hist), mean_guess, sigma_guess]
                 coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess)
                 mu = coeff[1]
                 mu_error = covar[1,1]
@@ -226,12 +232,11 @@ class Amplitude(ECAL):
         for board in self.letters:
             self.__amplitude_spill_single_board(single_run, board)
     
-    
     def variation_amplitude_spill(self):
         # TODO: docstring
         
         for single_run in self.included_runs:
-            self.__amplitude_spill_single_run(single_run)  
+            self.__amplitude_spill_single_run(single_run)
 
     # ------------------------------------------------------------------------------------------------------------------------------
     # RUNS
