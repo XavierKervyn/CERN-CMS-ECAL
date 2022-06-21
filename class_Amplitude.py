@@ -199,12 +199,12 @@ class Amplitude(ECAL):
             print('wrong parameter, either spill or run')
     
     
-    def __load_stats(self, single_run, board, param):
+    def __load_stats(self, single_run: int=None, board, param):
         """
         Loads the file containing the statistics for a single couple (run, board). If the file does not exist, calls __generate_stats()
         Returns the .csv file(s) of __generate_file()
         
-        single_run --- (int): number associated with the run to be analyzed, eg. 15610
+        :param single_run: number associated with the run to be analyzed, eg. 15610
         board --- (string): board to be analyzed with the run, eg. 'C'
         param --- ('run' or 'spill'): if __generate is called, we compute the statistics per run or spill
         """

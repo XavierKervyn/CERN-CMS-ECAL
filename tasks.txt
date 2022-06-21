@@ -14,6 +14,13 @@
 -add another way of computing the time delta in compute_time_delta, without synchronizer (ex. 3 gaussians)
 -transpose color mesh?
 -update README
+-plotly, save images in .html
+-reformat docstrings, cf. SPHINX https://www.sphinx-doc.org/en/master/usage/quickstart.html
+https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/blob/master/.gitlab-ci.yml 
+https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/tree/master/docs/source
+https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/blob/master/ecalautoctrl/__init__.py
+-save images in png and pdf
+
 
 // SETTINGS
 Run: identify why laser power
