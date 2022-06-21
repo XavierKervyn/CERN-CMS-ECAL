@@ -34,3 +34,7 @@ Run: identify why laser power
 -15627: 180 (129)
 -15628: 181 (133)
 -15629: 179
+
+// Tueday week 2: laser power range: 140:005:220
+- 15639: 140
+... 15655
