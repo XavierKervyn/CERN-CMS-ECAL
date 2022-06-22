@@ -258,7 +258,7 @@ class Amplitude_Delta(ECAL):
             print(e)
 
             
-    def __load_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: bool=None) -> Union[tuple|pd.DataFrame]:
+    def __load_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: bool=None) -> Union[tuple, pd.DataFrame]:
         """
         Loads the file containing the statistics for a single triplet (run, board, ref_channel). 
         If the file does not exist, calls __generate_stats()
@@ -502,7 +502,7 @@ class Amplitude_Delta(ECAL):
         # TODO: do we also want to plot sigma, mu_err, sigma_err?
         mean = np.zeros((len(self.letters), len(self.numbers)))
         for i, board in enumerate(self.letters):
-            run_amplitude_delta_df = self.__load_stats(single_run, board, ref_channel, param='run')
+            run_amplitude_delta_df = self.__load_stats(single_run, board, ref_channel, variation='run')
             mean[i,:] = run_amplitude_delta_df["mu"]
         
         plt.figure()
