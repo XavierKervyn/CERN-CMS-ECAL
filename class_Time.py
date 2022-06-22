@@ -9,24 +9,25 @@ class Time(ECAL):
     """
     Class for the analysis of the time resolution of the detector
     
-    included_runs -- (list of integers): the list of the runs one wants to consider
-    letters -- (list of strings): the list of boards
-    save_folder -- (string): folder where the csv data files are to be saved
-    raw_data_folder -- (string): folder where the .root input reconstruction files are stored
-    plot_save_folder -- (string): folder where the plots produced are to be staved
+    :param included_runs: the list of the runs one wants to consider
+    :param letters: the list of boards
+    :param save_folder: folder where the csv data files are to be saved
+    :param raw_data_folder: folder where the .root input reconstruction files are stored
+    :param plot_save_folder: folder where the plots produced are to be staved
     """
-    def __init__(self, included_runs, letters,
-                 save_folder = save_folder_global, raw_data_folder = raw_data_folder_global,
-                 plot_save_folder = plot_save_folder_global):   
+    def __init__(self, included_runs: List[int]=None, letters: str=None,
+                 save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global,
+                 plot_save_folder: str=plot_save_folder_global):   
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
     
     
-    def __synchroniser(self, value):
+    def __synchroniser(self, value: float=None) -> float:
         """ 
-        Function to remove the period shift. 
+        Function to remove the period shift.
         Collects the scattered peaks separated by integer multiples of the clock period to one large peak.
         
-        value -- (list of float): list of time deltas for a single channel to synchronize 
+        :param value: list of time deltas for a single channel to synchronize 
+        :return: synchronized value
         """
         clock_period = 6.238 # nanoseconds    
         window_leniency = 0.5 # How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5
@@ -39,11 +40,12 @@ class Time(ECAL):
         return float(Decimal(value) % Decimal(clock_period))
     
     
-    def __to_channel_converter(self, channel_number):
+    def __to_channel_converter(self, channel_number: int=None) -> str:
         """
         Converts the channel number to the appropriate Channel. For example 7 -> 'B3'.
         
-        channel_number (int): index of the channel considered in self.channel_names
+        :param channel_number: index of the channel considered in self.channel_names
+        :return: channel number
         """
         board_counter = 0
         while channel_number > 4:
@@ -52,18 +54,20 @@ class Time(ECAL):
         return f'{self.letters[board_counter]}{self.numbers[channel_number]}'
 
     
-    def __compute_time_delta(self, time, board, ref_channel, apply_synchroniser=True):
+    def __compute_time_delta(self, time: pd.DataFrame=None, board: str=None, ref_channel: int=None, apply_synchroniser: bool=True) -> pd.DataFrame:
         """
         Computes the time difference (delta) for a given reference channel versus the channels in the board given.
         
-        time -- (pd.DataFrame): 2D dataframe containing the time for all the events considered (rows) for the channels with
-                                the given board (rows)
-        board -- (string): board considered
-        ref_channel -- (string): reference channel with respect to which the differences are computed
-        apply_synchronization -- (bool): if one wants to apply the synchronization method or not
+        :param time: 2D dataframe containing the time for all the events considered (rows) for the channels with the given board (rows)
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param apply_synchronization: if one wants to apply the synchronization method or not
+        
+        :return: DataFrame of the time deltas, the columns being the channels and the rows the events
         """
         
-        time_pd = pd.DataFrame(time, columns=self.channel_names)
+        # Rename the column names with the channels in self._channel_names
+        time_pd = time
         n_numbers = len(self.numbers)
 
         time_delta_pd = pd.DataFrame()
@@ -89,19 +93,17 @@ class Time(ECAL):
         return time_delta_pd
         
         
-    def __generate_stats(self, single_run, board, ref_channel, param='run', plot=False):
+    def __generate_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str=None, plot: bool=False):
         """ 
         Creates the histograms of the time delta for a single run and single board and saves the Gaussian curve fit parameters and errors mu, mu_err, sigma, sigma_err in csv files.
-        If param='run', only one .csv file is created, the columns being the two fit parameters and their errors and the rows being the channels within the board considered.
-        If param='spill', four .csv files are created, the columns being the channels within the board considered, and the rows are the different spills within the single_run.
+        If variation='run', only one .csv file is created, the columns being the two fit parameters and their errors and the rows being the channels within the board considered.
+        If variation='spill', four .csv files are created, the columns being the channels within the board considered, and the rows are the different spills within the single_run.
         
-        single_run -- (string or int): the number of a run, for example '15610'
-        board -- (string): board considered
-        ref_channel -- (string): reference channel with respect to which the differences are computed
-        param -- (string): either 'run' or 'spill'. If 'run', the histograms are computed over a full run, 
-                           if 'spill' the histograms are computed separately for each spill in single_run.
-                           
-        plot -- (bool): If True, plots the histograms and fit, not if False
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param variation: either 'run' or 'spill'. If 'run', the histograms are computed over a full run, if 'spill' the histograms are computed separately for each spill in single_run.       
+        :param plot: If True, plots the histograms and fit, not if False
         """
         try:
             if ref_channel not in self.channel_names:
@@ -125,7 +127,7 @@ class Time(ECAL):
                 # column header for the Dataframes
                 col_list = len(self.numbers)*[board]; col_list = [x + y for x,y in zip(col_list, self.numbers)]
 
-                if param=='spill':
+                if variation=='spill':
                     # Computation with merged data: retrieve the spill number
                     h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
                     spill = h1['spill'] 
@@ -215,7 +217,7 @@ class Time(ECAL):
                     spill_time_sigma_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
                                                    + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
 
-                elif param=='run':
+                else: # variation=='run':
                     time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser=True)
 
                     # 'empty' arrays to store the statistics of each channel
@@ -276,20 +278,21 @@ class Time(ECAL):
             print(e)
             
             
-    def __load_stats(self, single_run, board, ref_channel, param):
+    def __load_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str=None) -> Union[tuple, pd.DataFrame]:
         """
         Returns the Gaussiant curve fit statistics of the time delta with respect to ref_channel for a single_run and board.
-        If param='run', considers the fit over the entire run, if param='spill', considers the fit over each spill separately.
+        If variation='run', considers the fit over the entire run, if variation='spill', considers the fit over each spill separately.
         
-        single_run -- (string or int): the number of a run, for example '15610'
-        board -- (string): board considered
-        ref_channel -- (string): reference channel with respect to which the differences are computed
-        param -- (string): either 'run' or 'spill'. If 'run', loads the statistics for the entire run, 
-                           if 'spill' loads the statistics for each spill.
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param variation: either 'run' or 'spill'. If 'run', loads the statistics for the entire run, if 'spill' loads the statistics for each spill.
+        
+        :return: DataFrame of tuple of DataFrame of the .csv file(s) loaded (TODO: unique type?)
         """
         try: # check if the file exists
             
-            if param=='spill': # returns a tuple with the 4 files
+            if variation=='spill': # returns a tuple with the 4 files
                 return (pd.read_csv(self.save_folder + f'/Run {single_run}' 
                                     + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}' 
@@ -298,15 +301,15 @@ class Time(ECAL):
                                 + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}' 
                                 + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv'))
-            elif param=='run':
+            else: # variation=='run':
                 return pd.read_csv(self.save_folder + f'/Run {single_run}' 
                                    + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
         except FileNotFoundError:
             print('File not found, generating .csv')
-            self.__generate_stats(single_run, board, ref_channel, param) # generating the statistics file
+            self.__generate_stats(single_run, board, ref_channel, variation) # generating the statistics file
             
             # loading the file and returning it
-            if param=='spill': # returns a tuple with the 4 files
+            if variation=='spill': # returns a tuple with the 4 files
                 return (pd.read_csv(self.save_folder + f'/Run {single_run}' 
                                     + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}' 
@@ -315,7 +318,7 @@ class Time(ECAL):
                                 + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}' 
                                 + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv'))
-            elif param=='run':
+            else: # variation=='run':
                 return pd.read_csv(self.save_folder + f'/Run {single_run}' 
                                    + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
         
@@ -325,13 +328,13 @@ class Time(ECAL):
             
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
-    def __time_delta_spill_single_board(self, single_run, board, ref_channel): 
+    def __time_delta_spill_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None): 
         """
         Plots the evolution over the spills in the single_run of the time delta of the channels on the board with respect to the ref_channel.
         
-        single_run -- (string or int): the number of a run, for example '15610'
-        board -- (string): board considered
-        ref_channel -- (string): reference channel with respect to which the differences are computed
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
         """
         
         # load the Dataframes
@@ -353,14 +356,14 @@ class Time(ECAL):
         plt.show()
         
 
-    def __time_delta_spill_single_run(self, single_run, ref_channel, all_channels):
+    def __time_delta_spill_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None):
         """
         Plots the evolution over the spills in the single_run of the time delta of the channels with respect to the ref_channel on one or all the boards depending on all_channels.
         
-        single_run -- (string or int): the number of a run, for example '15610'
-        board -- (string): board considered
-        ref_channel -- (string): reference channel with respect to which the differences are computed
-        all_channels -- (bool): If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param all_channels: If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         """
         if all_channels:
             for board in self.letters:
@@ -370,14 +373,14 @@ class Time(ECAL):
             self.__time_delta_spill_single_board(single_run, board, ref_channel)
             
     
-    def variation_time_delta_spill(self, ref_channel, all_channels):
+    def variation_time_delta_spill(self, ref_channel: str=None, all_channels: bool=None):
         """
         Plots the evolution over the spills in each of the runs in self.included_runs of the time delta of the channels with respect to the ref_channel on one or all the boards, depending on the value of all_channels.
         
-        single_run -- (string or int): the number of a run, for example '15610'
-        board -- (string): board considered
-        ref_channel -- (string): reference channel with respect to which the differences are computed
-        all_channels -- (bool): If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param all_channels: If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         """
         
         for single_run in self.included_runs:
@@ -388,25 +391,25 @@ class Time(ECAL):
     
     
     # ---- HISTOGRAMS ----
-    def __hist_time_delta_single_board(self, single_run, board, ref_channel):
+    def __hist_time_delta_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels included in the board with respect to the ref_channel for the single_run considered.
         
-        single_run -- (string or int): the number of a run, for example '15610'
-        board -- (string): board considered
-        ref_channel -- (string): reference channel with respect to which the differences are computed
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
         """
-        self.__generate_stats(single_run, board, ref_channel, param='run', plot=True)
+        self.__generate_stats(single_run, board, ref_channel, variation='run', plot=True)
         
         
-    def __hist_time_delta_single_run(self, single_run, ref_channel, all_channels):
+    def __hist_time_delta_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with respect to the ref_channel for the single_run considered.
         The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels. 
         
-        single_run -- (string or int): the number of a run, for example '15610'
-        ref_channel -- (string): reference channel with respect to which the differences are computed
-        all_channels -- (bool): If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param single_run: the number of a run, for example '15610'
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param all_channels: If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         """
         if all_channels:
             for board in self.letters:
@@ -416,26 +419,26 @@ class Time(ECAL):
             self.__hist_time_delta_single_board(single_run, board, ref_channel)
           
         
-    def hist_time_delta(self, ref_channel, all_channels):
+    def hist_time_delta(self, ref_channel: str=None, all_channels: bool=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with respect to the ref_channel for the single_run considered.
         The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels. 
         
-        single_run -- (string or int): the number of a run, for example '15610'
-        ref_channel -- (string): reference channel with respect to which the differences are computed
-        all_channels -- (bool): If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param single_run: the number of a run, for example '15610'
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param all_channels: If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         """
         for single_run in self.included_runs:
             self.__hist_time_delta_single_run(single_run, ref_channel, all_channels)
 
             
     # ---- VARIATION OVER RUNS ----
-    def __time_delta_run_single_board(self, board, ref_channel):
+    def __time_delta_run_single_board(self, board: str=None, ref_channel: str=None):
         """
         Plots the evolution over the runs of the time delta of the channels on the board with respect to the ref_channel.
         
-        board -- (string): board considered
-        ref_channel -- (string): reference channel with respect to which the differences are computed
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
         """
         
         # load the Dataframes     
@@ -461,12 +464,12 @@ class Time(ECAL):
         plt.show()
     
 
-    def variation_time_delta_run(self, ref_channel, all_channels):
+    def variation_time_delta_run(self, ref_channel: str=None, all_channels: bool=None):
         """
         Plots the evolution over the runs in self.included_runs of the time delta of the channels with respect to the ref_channel on one or all the boards, depending on the value of all_channels.
         
-        ref_channel -- (string): reference channel with respect to which the differences are computed
-        all_channels -- (bool): If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param all_channels: If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         """
         try:
             if len(self.included_runs) <= 1:
@@ -482,13 +485,13 @@ class Time(ECAL):
             print(e)
     
     # ---- STATISTICS OVER RUNS ----
-    def __run_statistics_single_run(self, single_run, ref_channel):
+    def __run_statistics_single_run(self, single_run: int=None, ref_channel: str=None):
         """ 
         Plots mean mu for the time delta with respect to ref_channel of a designated single_run in a colormesh plot.
         The mesh represents all the channels and the color reperesents the time delta.
     
-        single_run -- (string or int) The number of a run, for example '15484'
-        ref_channel -- (string): reference channel with respect to which the differences are computed
+        :param single_run: The number of a run, for example '15484'
+        :param ref_channel: reference channel with respect to which the differences are computed
         """
     
         stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
@@ -501,7 +504,7 @@ class Time(ECAL):
         # TODO: do we also want to plot sigma, mu_err, sigma_err?
         mean = np.zeros((len(self.letters), len(self.numbers)))
         for i, board in enumerate(self.letters):
-            run_time_delta_df = self.__load_stats(single_run, board, ref_channel, param='run')
+            run_time_delta_df = self.__load_stats(single_run, board, ref_channel, variation='run')
             mean[i,:] = run_time_delta_df["mu"]
         
         plt.figure()
@@ -514,68 +517,12 @@ class Time(ECAL):
         plt.savefig(run_save + f'Time Stats Colormesh ref {ref_channel}.pdf', dpi = 300)
 
         
-    def run_statistics(self, ref_channel):
+    def run_statistics(self, ref_channel: str=None):
         """ 
         Plots mean mu for the time delta with respect to ref_channel of the runs in self.included_runs in colormesh plots.
         The mesh represents all the channels and the color reperesents the time delta.
     
-        ref_channel -- (string): reference channel with respect to which the differences are computed
+        :param ref_channel: reference channel with respect to which the differences are computed
         """
         for single_run in self.included_runs:
             self.__run_statistics_single_run(single_run, ref_channel)
-
-# -------------------------------------------------------------------------------------
-# TODO: delete?
-
-    def variation_statistics(measurement_name, measurement_date, colormesh_max=10, within_board_plot=True):
-        """ Plots the mu and sigma and their errors of a measurement over several runs in colormesh plots.
-
-        measurement_name -- (string) Title of the measurement, for example power cycle or temperature
-        measurement_date -- (string) Date of the measurement. Originally used to distinguish between series of runs, 
-                            but the date will not be unique enough for future measurements.
-                            Could and should be replaced by a unique identifier, like an ID for a batch of runs.
-        colormesh_max -- (float) The maximum of the scale in the colormesh plot. Lowering this reveals finer differences, but blows out rough ones.
-        within_board_plot -- (boolean) Plots the average value of a statistic within the different boards. Still needs refinement as it does not properly
-                            handle erroneous channels as of now.
-        """
-
-        with h5py.File(self.plot_save_folder + '/' + f'{measurement_name}' + f' {measurement_date}' + ' Stats.h5', 'r') as hf:
-            stats_of_stats = hf["stats"][:]
-
-        #print(stats_of_stats[:, :, 1], stats_of_stats.shape)
-
-        plot_titles = ['Mean of Mu', 'Std Dev of Mu', 'Mean of Sigma', 'Std Dev of Sigma']
-        variation_save = self.plot_save_folder + '/' + measurement_name + '/' + measurement_date + '/'
-        Path(variation_save).mkdir(parents=True, exist_ok=True)
-
-        # Plotting
-        for k, ref_channel in enumerate(self.channel_names):
-            for i in range(len(stats_of_stats[0,:,0])):
-
-                # Used for skipping means, they are not really interesting without the std dev
-                if (i == 0) or (i ==2):
-                    continue
-
-                # Visualizing the average value of a statistic within a board. The lowest one (desirable for std dev) is marked red.
-                if within_board_plot:
-                    if k%5==0:
-                        within_board_performances = []
-                        for q in range(len(self.letters)):
-                            within_board_performances.append(np.mean(stats_of_stats[(q*len(self.numbers)):(q*len(self.numbers))+5, i, k]))
-                        within_board_performances = np.array(within_board_performances)
-                        print(within_board_performances)
-                        plt.figure()
-                        barlist = plt.bar(self.letters, height = within_board_performances)
-                        barlist[np.argmin(within_board_performances)].set_color('r')
-                        plt.title(f'{plot_titles[i]}: Within board performance for reference board {self.letters[k//5]}')
-                        plt.show()
-
-
-                plt.figure()
-                stat_data = stats_of_stats[:, i, k].reshape(4,5)
-                c = plt.pcolormesh(self.X, self.Y, stat_data, vmin = 0, vmax = 10)
-                cb = plt.colorbar(c)
-                cb.set_label('Deviation over Temperature (ps)')
-                plt.title('Temperature Variation' + '\n' +  f'{plot_titles[i]}, Reference Channel: {ref_channel}')
-                plt.savefig(variation_save + f'Variation Stats Colormesh {plot_titles[i]} Ref Channel {self.__to_channel_converter(k)}.pdf', dpi = 300)      
-                plt.show()
