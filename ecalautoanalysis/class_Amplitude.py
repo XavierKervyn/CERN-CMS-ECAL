@@ -77,11 +77,7 @@ class Amplitude(ECAL):
                 sigma_error_arr = np.zeros(len(self.numbers))
 
                 for i, channel in enumerate(slicing):         
-                    if plot: # plots an histogram if True
-                        plt.figure()
-                        hist, bin_edges, _ = plt.hist(aspill_pd_temp[channel], bins = 1500, label="Amplitude Histogram")
-                    else:
-                        hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
+                    hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
 
                     bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
@@ -103,20 +99,11 @@ class Amplitude(ECAL):
                     sigma_arr[i] = sigma
                     sigma_error_arr[i] = sigma_error
                     
-                    if plot:
-                        # plotting the histogram with a gaussian fit, the mean and the standard deviation
-                        plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
-                        plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
-                        sigma_color = 'pink'
-                        plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
-                        plt.axvline(mu - sigma, color = sigma_color)
-
-                        plt.title(f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}')
-                        plt.xlabel('Amplitude (??)')
-                        plt.ylabel('Occurence (a.u.)')
-                        plt.legend(loc='best')
-
-                        plt.show()
+                    if plot: # TODO: add path name
+                        title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
+                        xlabel = 'Amplitude (??)'
+                        ylabel = 'Occurence (a.u.)'
+                        plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, *coeff)
                 
                 # gather all the statistics for each spill
                 amp_mean_spill[j,:] = mu_arr
@@ -148,11 +135,8 @@ class Amplitude(ECAL):
             sigma_error_arr = np.zeros(len(self.numbers))
 
             for i, channel in enumerate(slicing):
-                if plot:
-                    plt.figure()
-                    hist, bin_edges, _ = plt.hist(amp_pd[channel], bins = 1500, label="Amplitude Histogram")
-                else:
-                    hist, bin_edges = np.histogram(amp_pd[channel], bins = 1500)
+                hist, bin_edges = np.histogram(amp_pd[channel], bins = 1500)
+                #hist, bin_edges, _ = plt.hist(amp_pd[channel], bins = 1500)
 
                 bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
@@ -175,19 +159,16 @@ class Amplitude(ECAL):
                 sigma_error_arr[i] = sigma_error
                 
                 if plot:
-                        # plotting the histogram with a gaussian fit, the mean and the standard deviation
-                        plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
-                        plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
-                        sigma_color = 'pink'
-                        plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
-                        plt.axvline(mu - sigma, color = sigma_color)
-
-                        plt.title(f'Run: {run_name}, Channel: {board+self.numbers[i]}')
-                        plt.xlabel('Amplitude (??)')
-                        plt.ylabel('Occurence (a.u.)')
-                        plt.legend(loc='best')
-
-                        plt.show()
+                    title = f'Run: {run_name}, Channel: {board+self.numbers[i]}'
+                    xlabel = 'Amplitude (??)'
+                    ylabel = 'Occurence (a.u.)'
+                    
+                    plot_save = self.plot_save_folder + f'/Run {single_run}'
+                    Path(plot_save).mkdir(parents=True, exist_ok=True) # folder created
+                    
+                    path = plot_save + f'/Run amplitude run {single_run} board {board}'
+                    
+                    plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
 
             # convert the arrays into a single Dataframe
             run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
@@ -225,7 +206,7 @@ class Amplitude(ECAL):
                 
         except FileNotFoundError:
             print('File not found, generating .csv')
-            self.__generate_stats(single_run, board, param) # generating the statistics file
+            self.__generate_stats(single_run, board, variation) # generating the statistics file
             
             # loading the file and returning it
             if variation=='spill':
@@ -255,6 +236,8 @@ class Amplitude(ECAL):
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
         """
+        # TODO: update docstring
+        
         # load the DataFrames with the statistics computed per spill
         mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, 'spill')
         num_spills = mean.shape[0] # number of spills in the single run
@@ -262,17 +245,35 @@ class Amplitude(ECAL):
         # keep only the channels for the board. Ex, if 'A', the ['A1', 'A2', etc.]
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
-        # Plot the evolution per spill for a single board
-        plt.figure()
-        for i, number in enumerate(self.numbers):
-            plt.errorbar(np.arange(num_spills), mean[slicing[i]], yerr=sigma[slicing[i]], label=board+number)
-            
-        plt.xticks(np.arange(num_spills), 1+np.arange(num_spills))
-        plt.legend(loc='best')
-        plt.title(f'Run {single_run}, board {board}, mean amplitude over spills')
-        plt.xlabel('Spill')
-        plt.ylabel('Amplitude (??)')
-        plt.show()
+        # Spill column in pd.DataFrame for plot
+        spill_column_tmp = [len(self.numbers)*[i] for i in range(num_spills)]
+        spill_column = []
+        for lst in spill_column_tmp:
+            spill_column += lst
+        
+        # Channel column in plot pd.DataFrame
+        channel_column = num_spills*slicing
+        
+        # Mean and sigma columns in plot pd.DataFrame
+        mean_arr = mean[slicing].to_numpy()
+        mean_stacked = mean_arr.flatten()
+        sigma_arr = sigma[slicing].to_numpy()
+        sigma_stacked = sigma_arr.flatten()
+        
+        plot_df = pd.DataFrame({"spill": spill_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
+        
+        fig = make_subplots(specs=[[{"secondary_y": False}]])
+        fig = px.line(data_frame=plot_df, x='spill', y='mean', error_y="sigma", color='channel')
+
+        # TODO: resize plot?
+        plot_title = f'Run {single_run}, board {board}, mean amplitude over spills'
+        xlabel = 'Spill'
+        ylabel = 'Amplitude (??)'
+        fig.update_layout(title=plot_title,
+                         xaxis_title=xlabel,
+                         yaxis_title=ylabel,
+                         xaxis= dict(tickmode='linear', tick0=1, dtick=1))
+        fig.show()
     
     
     def __amplitude_spill_single_run(self, single_run: int=None):
@@ -346,17 +347,35 @@ class Amplitude(ECAL):
         # keep only the channels of the board we are interested in
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
-        # plot the evolution for a single board
-        plt.figure()
-        for j, number in enumerate(self.numbers):
-            plt.errorbar(np.arange(len(self.included_runs)), mean[:,j], yerr=sigma[:,j], label=board+number)
-            
-        plt.xticks(np.arange(len(self.included_runs)), self.included_runs)
-        plt.legend(loc='best')
-        plt.title(f'Board {board}, mean amplitude over runs')
-        plt.xlabel('Run')
-        plt.ylabel('Amplitude (??)')
-        plt.show()
+        # Run column in pd.DataFrame for plot
+        run_column_tmp = [len(self.numbers)*[run] for run in self.included_runs]
+        run_column = []
+        for lst in run_column_tmp:
+            run_column += lst
+        
+        # Channel column in plot pd.DataFrame
+        channel_column = len(self.included_runs)*slicing
+        
+        # Mean and sigma columns in plot pd.DataFrame
+        mean_stacked = mean.flatten()
+        sigma_stacked = sigma.flatten()
+        
+        print(run_column)
+        
+        plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
+        
+        fig = make_subplots(specs=[[{"secondary_y": False}]])
+        fig = px.line(data_frame=plot_df, x='run', y='mean', error_y="sigma", color='channel')
+
+        # TODO: resize plot?
+        plot_title = f'Board {board}, mean amplitude over runs'
+        xlabel = 'Run'
+        ylabel = 'Amplitude (??)'
+        fig.update_layout(title=plot_title,
+                         xaxis_title=xlabel,
+                         yaxis_title=ylabel)
+        # TODO: check xticks
+        fig.show()
     
 
     def variation_amplitude_run(self):
