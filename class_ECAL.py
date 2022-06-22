@@ -6,6 +6,7 @@ import pandas as pd
 import glob
 import os
 import h5py
+import awkward as ak
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from decimal import *
@@ -63,3 +64,34 @@ class ECAL:
         for letter in self.letters:
             channel_names_temp = [letter + n for n in self.numbers]
             self.channel_names += channel_names_temp
+        
+        try:
+            self.__check_consistency()
+        except AssertionError as e:
+            print(e)
+   
+            
+    def __check_consistency(self):
+        # TODO: docstring
+        
+        single_run = self.included_runs[0]
+        folder =  self.raw_data_folder + str(int(single_run))
+        h = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
+
+        columns_ref = ak.to_pandas(h).columns
+        
+        channels_ref = [channel for channel in columns_ref if channel[0] in ['A', 'B', 'C', 'D', 'E'] and channel[1] in self.numbers]
+        
+        if set(channels_ref) != set(self.channel_names):
+            raise AssertionError("Letters do not match data")
+        
+        for single_run in self.included_runs:
+            
+            folder =  self.raw_data_folder + str(int(single_run))
+            h = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
+
+            columns = ak.to_pandas(h).columns
+            
+            if set(columns) != set(columns_ref):
+                raise AssertionError("Included runs are not consistent")
+            
