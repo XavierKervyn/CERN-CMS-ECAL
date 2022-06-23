@@ -21,7 +21,15 @@ setup(name='ecalautoanalysis',
       ],
       python_requires=">=3.6",
       install_requires=[
-          'uproot'
+          'uproot',
+          'numpy',
+          'pandas',
+          'awkward',
+          'plotly',
+          'matplotlib',
+          'scipy',
+          'pathlib',
+          'typing'
       ]
 )
 
