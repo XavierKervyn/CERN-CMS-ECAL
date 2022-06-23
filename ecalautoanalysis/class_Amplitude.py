@@ -99,7 +99,7 @@ class Amplitude(ECAL):
                     sigma_arr[i] = sigma
                     sigma_error_arr[i] = sigma_error
                     
-                    if plot: # TODO: add path name
+                    if plot: # TODO: add path name to save the plots
                         title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
                         xlabel = 'Amplitude (??)'
                         ylabel = 'Occurence (a.u.)'
@@ -360,7 +360,7 @@ class Amplitude(ECAL):
         
         xlabel = 'Run'
         ylabel = 'Amplitude (??)'
-        plot_title = f'Run {single_run}, board {board}, mean amplitude over runs'
+        plot_title = f'Run {single_run}, Board {board}, mean amplitude over runs'
         
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
     

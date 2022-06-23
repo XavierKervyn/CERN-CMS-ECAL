@@ -108,6 +108,7 @@ class Time(ECAL):
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
+
             else:
                 # Computation with merged data
                 folder =  self.raw_data_folder + str(int(single_run))
@@ -158,12 +159,7 @@ class Time(ECAL):
                             if channel == ref_channel:
                                 continue
 
-                            if plot:
-                                plt.figure()
-                                hist, bin_edges, _ = plt.hist(time_delta_pd[channel], bins = 1500, label="Amplitude Histogram")
-                            else:
-                                hist, bin_edges = np.histogram(time_delta_pd[channel], bins = 1500)
-
+                            hist, bin_edges = np.histogram(time_delta_pd[channel], bins = 1500)
                             bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
 
                             # fitting process
@@ -181,20 +177,12 @@ class Time(ECAL):
                             sigma_arr[i] = sigma
                             sigma_error_arr[i] = sigma_error
 
-                            if plot:
-                                # plotting the histogram with a gaussian fit, the mean and the standard deviation
-                                plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
-                                plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
-                                sigma_color = 'pink'
-                                plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
-                                plt.axvline(mu - sigma, color = sigma_color)
-
-                                plt.title(f'Run: {run_name}, Ref: {ref_channel}, Channel: {board+self.numbers[i]}, Spill {spill}')
-                                plt.xlabel('Time delta (ps)')
-                                plt.ylabel('Occurence (a.u.)')
-                                plt.legend(loc='best')
-
-                                plt.show()
+                            if plot: # TODO: add path name to save the plots
+                                title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}, Spill {spill}'
+                                xlabel = 'Time delta (ps)'
+                                ylabel = 'Occurence (a.u.)'
+                                path = ''
+                                super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
 
                         time_mean_spill[j,:] = mu_arr
                         time_mean_err_spill[j,:] = mu_error_arr
@@ -230,12 +218,7 @@ class Time(ECAL):
                         if channel == ref_channel:
                             continue
 
-                        if plot:
-                            plt.figure()
-                            hist, bin_edges, _ = plt.hist(time_delta_pd[channel], bins = 1500, label="Amplitude Histogram")
-                        else:
-                            hist, bin_edges = np.histogram(time_delta_pd[channel], bins = 1500)
-
+                        hist, bin_edges = np.histogram(time_delta_pd[channel], bins = 1500)
                         bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
                         # fitting process
@@ -253,20 +236,12 @@ class Time(ECAL):
                         sigma_arr[i] = sigma
                         sigma_error_arr[i] = sigma_error
 
-                        if plot:
-                                # plotting the histogram with a gaussian fit, the mean and the standard deviation
-                                plt.plot(bin_centers, gaussian(bin_centers, *coeff), label='Gaussian Fit')
-                                plt.axvline(mu, label = f'Mean: {np.around(mu, decimals = 1)} ps', color = 'red')
-                                sigma_color = 'pink'
-                                plt.axvline(mu + sigma, label = f'Std Dev: {np.around(sigma, decimals = 1)} ps', color = sigma_color)
-                                plt.axvline(mu - sigma, color = sigma_color)
-
-                                plt.title(f'Run: {run_name}, Ref: {ref_channel}, Channel: {board+self.numbers[i]}')
-                                plt.xlabel('Time delta (ps)')
-                                plt.ylabel('Occurence (a.u.)')
-                                plt.legend(loc='best')
-
-                                plt.show()
+                        if plot: # TODO: add path name to save the plots
+                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}'
+                            xlabel = 'Time delta (ps)'
+                            ylabel = 'Occurence (a.u.)'
+                            path = ''
+                            super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
 
                     # convert the arrays into a single Dataframe
                     run_time_delta_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
@@ -276,7 +251,7 @@ class Time(ECAL):
                                              f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
         except ValueError as e:
             print(e)
-            
+
             
     def __load_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str=None) -> Union[tuple, pd.DataFrame]:
         """
@@ -306,7 +281,7 @@ class Time(ECAL):
                                    + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
         except FileNotFoundError:
             print('File not found, generating .csv')
-            self.__generate_stats(single_run, board, ref_channel, variation) # generating the statistics file
+            self.__generate_stats(single_run, board, ref_channel, variation, plot=False) # generating the statistics file
             
             # loading the file and returning it
             if variation=='spill': # returns a tuple with the 4 files
@@ -328,6 +303,7 @@ class Time(ECAL):
             
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
+    
     def __time_delta_spill_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None): 
         """
         Plots the evolution over the spills in the single_run of the time delta of the channels on the board with respect to the ref_channel.
@@ -343,17 +319,28 @@ class Time(ECAL):
         
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
-        # Plotting evolution for a single board
-        plt.figure()
-        for i, number in enumerate(self.numbers):
-            plt.errorbar(np.arange(num_spills), mean[slicing[i]], yerr=sigma[slicing[i]], label=board+number)
-            
-        plt.xticks(np.arange(num_spills), 1+np.arange(num_spills)) # TODO: check
-        plt.legend(loc='best')
-        plt.title(f'Run {single_run}, board {board}, ref {ref_channel}, mean time delta over spills')
-        plt.xlabel('Spill')
-        plt.ylabel('Time delta (ps)')
-        plt.show()
+        # Spill column in pd.DataFrame for plot
+        spill_column_tmp = [len(self.numbers)*[i] for i in range(1, num_spills+1)]
+        spill_column = []
+        for lst in spill_column_tmp:
+            spill_column += lst
+        
+        # Channel column in plot pd.DataFrame
+        channel_column = num_spills*slicing
+        
+        # Mean and sigma columns in plot pd.DataFrame
+        mean_arr = mean[slicing].to_numpy()
+        mean_stacked = mean_arr.flatten()
+        sigma_arr = sigma[slicing].to_numpy()
+        sigma_stacked = sigma_arr.flatten()
+        
+        plot_df = pd.DataFrame({"spill": spill_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
+      
+        xlabel = 'Spill'
+        ylabel = 'Time delta (ps)'
+        plot_title = f'Run {single_run}, Board {board}, Ref {ref_channel}, mean time delta over spills'
+        
+        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
         
 
     def __time_delta_spill_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None):
@@ -386,11 +373,12 @@ class Time(ECAL):
         for single_run in self.included_runs:
             self.__time_delta_spill_single_run(single_run, ref_channel, all_channels)
     
+    
     # ------------------------------------------------------------------------------------------------------------------------------
     # RUNS
     
-    
     # ---- HISTOGRAMS ----
+    
     def __hist_time_delta_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels included in the board with respect to the ref_channel for the single_run considered.
@@ -433,6 +421,7 @@ class Time(ECAL):
 
             
     # ---- VARIATION OVER RUNS ----
+    
     def __time_delta_run_single_board(self, board: str=None, ref_channel: str=None):
         """
         Plots the evolution over the runs of the time delta of the channels on the board with respect to the ref_channel.
@@ -451,18 +440,27 @@ class Time(ECAL):
         
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
-        # Plotting evolution for a single board
-        plt.figure()
-        for j, number in enumerate(self.numbers):
-            plt.errorbar(np.arange(len(self.included_runs)), mean[:,j], yerr=sigma[:,j], label=board+number)
-            
-        plt.xticks(np.arange(len(self.included_runs)), self.included_runs)
-        plt.legend(loc='best')
-        plt.title(f'Board {board}, ref {ref_channel}, mean time delta over runs')
-        plt.xlabel('Run')
-        plt.ylabel('Time delta (ps)')
-        plt.show()
-    
+        # Run column in pd.DataFrame for plot
+        run_column_tmp = [len(self.numbers)*[i] for i in np.arange(len(self.included_runs))]
+        run_column = []
+        for lst in run_column_tmp:
+            run_column += lst
+        
+        # Channel column in plot pd.DataFrame
+        channel_column = len(self.included_runs)*slicing
+        
+        # Mean and sigma columns in plot pd.DataFrame
+        mean_stacked = mean.flatten()
+        sigma_stacked = sigma.flatten()
+        
+        plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
+        
+        xlabel = 'Run'
+        ylabel = 'Time delta (ps)'
+        plot_title = f'Run {single_run}, Board {board}, Ref {ref_channel}, mean time delta over runs'
+        
+        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
+        
 
     def variation_time_delta_run(self, ref_channel: str=None, all_channels: bool=None):
         """
@@ -485,6 +483,7 @@ class Time(ECAL):
             print(e)
     
     # ---- STATISTICS OVER RUNS ----
+    
     def __run_statistics_single_run(self, single_run: int=None, ref_channel: str=None):
         """ 
         Plots mean mu for the time delta with respect to ref_channel of a designated single_run in a colormesh plot.
@@ -493,7 +492,6 @@ class Time(ECAL):
         :param single_run: The number of a run, for example '15484'
         :param ref_channel: reference channel with respect to which the differences are computed
         """
-    
         stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
         folder =  self.raw_data_folder + str(int(single_run))
         run_name = os.path.basename(os.path.normpath(folder))
@@ -502,19 +500,13 @@ class Time(ECAL):
         Path(run_save).mkdir(parents=True, exist_ok=True)
 
         # TODO: do we also want to plot sigma, mu_err, sigma_err?
-        mean = np.zeros((len(self.letters), len(self.numbers)))
+        mean = np.zeros((len(self.numbers), len(self.letters)))
         for i, board in enumerate(self.letters):
-            run_time_delta_df = self.__load_stats(single_run, board, ref_channel, variation='run')
-            mean[i,:] = run_time_delta_df["mu"]
-        
-        plt.figure()
-        c = plt.pcolormesh(self.X, self.Y, mean)
-        cb = plt.colorbar(c)
-        cb.set_label('Mean time delta over channels (ps)')
-        plt.title(f'Mean, Run: {run_name}, ref: {ref_channel}')
-        plt.show()
-        
-        plt.savefig(run_save + f'Time Stats Colormesh ref {ref_channel}.pdf', dpi = 300)
+            run_time_df = self.__load_stats(single_run, board, ref_channel, 'run')
+            mean[:,i] = np.array(list(reversed(run_time_df["mu"])))
+    
+        plot_title = f'Run {single_run}, Board {board}, Ref {ref_channel}, mean time delta over runs'
+        super()._ECAL__plot_colormesh(mean, plot_title)
 
         
     def run_statistics(self, ref_channel: str=None):
