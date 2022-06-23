@@ -3,12 +3,10 @@
 import uproot
 import numpy as np
 import pandas as pd
-import glob
+#import glob
 import os
-import h5py
 import awkward as ak
 import plotly.express as px
-import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
