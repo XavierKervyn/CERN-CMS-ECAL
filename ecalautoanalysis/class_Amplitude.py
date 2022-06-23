@@ -103,7 +103,8 @@ class Amplitude(ECAL):
                         title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
                         xlabel = 'Amplitude (??)'
                         ylabel = 'Occurence (a.u.)'
-                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, *coeff)
+                        path = ''
+                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
                 
                 # gather all the statistics for each spill
                 amp_mean_spill[j,:] = mu_arr
@@ -356,8 +357,6 @@ class Amplitude(ECAL):
         
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
         
-        display(plot_df)
-        
         xlabel = 'Run'
         ylabel = 'Amplitude (??)'
         plot_title = f'Run {single_run}, board {board}, mean amplitude over runs'
@@ -402,7 +401,9 @@ class Amplitude(ECAL):
             run_amp_df = self.__load_stats(single_run, board, 'run')
             mean[:,i] = np.array(list(reversed(run_amp_df["mu"])))
 
-        super()._ECAL__plot_colormesh(mean)
+        plot_title = f'Run {single_run}, mean amplitudes'
+        
+        super()._ECAL__plot_colormesh(mean, plot_title)
         
         
     def run_statistics(self):
