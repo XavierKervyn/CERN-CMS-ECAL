@@ -22,7 +22,7 @@ class Amplitude(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # GENERAL
     
-    def __generate_stats(self, single_run: int=None, board: str=None, variation: str='run', plot: bool=False):
+    def __generate_stats(self, single_run: int=None, board: str=None, variation: str='run', plot: bool=False, spill_index: int=None):
         """
         Generates the statistics for a given board in a run, either when analyzing spills or runs. Can also plot the histogram of the data.
         Statistics of the amplitude (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
@@ -36,7 +36,10 @@ class Amplitude(ECAL):
 
         # Computation with merged data: retrieve the amplitude
         folder =  self.raw_data_folder + str(int(single_run))
-        h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
+        if variation=='spill' and plot==True:
+            h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
+        else:
+            h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
         run_name = os.path.basename(os.path.normpath(folder)) # creating folder to save csv file
         # TODO: delete print or add verbose boolean parameter?
         print('Run: ', run_name)
@@ -51,12 +54,17 @@ class Amplitude(ECAL):
         # column header
         col_list = len(self.numbers)*[board]; col_list = [x + y for x,y in zip(col_list, self.numbers)] 
         
+        
         if variation=='spill': # if we want to compute the statistics per spill
             # retrieve the spill number in the .root file
-            h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
+            if plot==True:
+                h1 = uproot.concatenate({folder + f'/{spill_index}.root' : 'h4'}, allow_missing = True)
+            else:
+                h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
             spill = h1['spill'] 
+            
             spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
-
+            
             # merge the two DataFrames
             aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
 
@@ -294,32 +302,32 @@ class Amplitude(ECAL):
     
     # ---- HISTOGRAMS ----
     
-    def __hist_amplitude_single_board(self, single_run: int=None, board: str=None):
+    def __hist_amplitude_single_board(self, single_run: int=None, board: str=None, variation: str=None, spill_i: int=None):
         """
         Generates the statistics for all the channels on a given board. Plots the corresponding histograms.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
         """
-        self.__generate_stats(single_run, board, 'run', plot=True)
+        self.__generate_stats(single_run, board, variation, plot=True, spill_index=spill_i)
         
 
-    def __hist_amplitude_single_run(self, single_run: int=None):
+    def __hist_amplitude_single_run(self, single_run: int=None, variation: str=None, spill_i: int=None):
         """
         Generates the statistics for all the channels in a given run (loops on all its boards). Plots the corresponding histograms.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         """
         for board in self.letters:
-            self.__hist_amplitude_single_board(single_run, board)
+            self.__hist_amplitude_single_board(single_run, board, variation, spill_i)
         
 
-    def hist_amplitude(self):
+    def hist_amplitude(self, variation: str='run', spill_i: int=None):
         """
         Computes the statistics and plots the corresponding histogram for every single_run in self.included_runs
         """
         for single_run in self.included_runs:
-            self.__hist_amplitude_single_run(single_run)
+            self.__hist_amplitude_single_run(single_run, variation, spill_i)
     
     
     # ---- VARIATION OVER RUNS ----

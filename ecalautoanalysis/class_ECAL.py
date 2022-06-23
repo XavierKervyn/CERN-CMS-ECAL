@@ -114,7 +114,7 @@ class ECAL:
     def __plot_hist(self, df, channel, bin_centers, hist_title, xlabel, ylabel, path, *coeff):
         # TODO: docstring
         trace1 = px.histogram(df, x=channel, nbins=3000) # TODO: label?
-
+        
         d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
         fit_pd = pd.DataFrame(data=d)
         trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=["red"]) # TODO: name/label?
