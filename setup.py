@@ -24,6 +24,7 @@ setup(name='ecalautoanalysis',
       ]
 )
 
+# TODO: add these dependencies for lxplus
 """
           'uproot',
           'numpy',

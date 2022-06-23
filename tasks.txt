@@ -3,9 +3,9 @@
 -implement a way of generating plots in an automatic fashion
 
 // TASKS: 
-1. finish set up as a package
-2. finish graphs with plotly --> problem with vline and vrect + orca to save save images in png and pdf, transpose color mesh?
-3. deploy graphs everywhere
+[OK] 1. finish set up as a package
+[~] 2. finish graphs with plotly --> problem with vline and vrect + orca to save save images in png and pdf
+[] 3. deploy graphs everywhere
 4. implement histogram for spill
 5. deploy everywhere
 6. update documentation (mostly conf.py)
