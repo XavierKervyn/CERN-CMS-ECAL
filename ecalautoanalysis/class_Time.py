@@ -93,7 +93,7 @@ class Time(ECAL):
         return time_delta_pd
         
         
-    def __generate_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str=None, plot: bool=False):
+    def __generate_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str=None, plot: bool=False, spill_index: int=None):
         """ 
         Creates the histograms of the time delta for a single run and single board and saves the Gaussian curve fit parameters and errors mu, mu_err, sigma, sigma_err in csv files.
         If variation='run', only one .csv file is created, the columns being the two fit parameters and their errors and the rows being the channels within the board considered.
@@ -110,9 +110,13 @@ class Time(ECAL):
                 raise ValueError("Reference channel must be in the channel list")
 
             else:
-                # Computation with merged data
+                # Computation with merged data: retrieve the amplitude
                 folder =  self.raw_data_folder + str(int(single_run))
-                h2 = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
+                if variation=='spill' and plot==True:
+                    h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
+                else:
+                    h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
+        
 
                 run_name = os.path.basename(os.path.normpath(folder))
                 print('Run: ', run_name)
@@ -130,7 +134,10 @@ class Time(ECAL):
 
                 if variation=='spill':
                     # Computation with merged data: retrieve the spill number
-                    h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
+                    if plot==True:
+                        h1 = uproot.concatenate({folder + f'/{spill_index}.root' : 'h4'}, allow_missing = True)
+                    else:
+                        h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
                     spill = h1['spill'] 
                     spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
 
@@ -379,7 +386,7 @@ class Time(ECAL):
     
     # ---- HISTOGRAMS ----
     
-    def __hist_time_delta_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None):
+    def __hist_time_delta_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str=None, spill_i: int=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels included in the board with respect to the ref_channel for the single_run considered.
         
@@ -387,10 +394,10 @@ class Time(ECAL):
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
         """
-        self.__generate_stats(single_run, board, ref_channel, variation='run', plot=True)
+        self.__generate_stats(single_run, board, ref_channel, variation, plot=True, spill_index=spill_i)
         
         
-    def __hist_time_delta_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None):
+    def __hist_time_delta_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None, variation: str=None, spill_i: int=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with respect to the ref_channel for the single_run considered.
         The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels. 
@@ -401,13 +408,13 @@ class Time(ECAL):
         """
         if all_channels:
             for board in self.letters:
-                self.__hist_time_delta_single_board(single_run, board, ref_channel)
+                self.__hist_time_delta_single_board(single_run, board, ref_channel, variation, spill_i)
         else:
             board = ref_channel[0]
-            self.__hist_time_delta_single_board(single_run, board, ref_channel)
+            self.__hist_time_delta_single_board(single_run, board, ref_channel, variation, spill_i)
           
         
-    def hist_time_delta(self, ref_channel: str=None, all_channels: bool=None):
+    def hist_time_delta(self, ref_channel: str=None, all_channels: bool=None, variation: str='run', spill_i: int=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with respect to the ref_channel for the single_run considered.
         The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels. 
@@ -417,7 +424,7 @@ class Time(ECAL):
         :param all_channels: If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         """
         for single_run in self.included_runs:
-            self.__hist_time_delta_single_run(single_run, ref_channel, all_channels)
+            self.__hist_time_delta_single_run(single_run, ref_channel, all_channels, variation, spill_i)
 
             
     # ---- VARIATION OVER RUNS ----

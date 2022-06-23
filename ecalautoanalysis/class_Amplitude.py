@@ -40,6 +40,7 @@ class Amplitude(ECAL):
             h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
         else:
             h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
+        
         run_name = os.path.basename(os.path.normpath(folder)) # creating folder to save csv file
         # TODO: delete print or add verbose boolean parameter?
         print('Run: ', run_name)
@@ -54,7 +55,6 @@ class Amplitude(ECAL):
         # column header
         col_list = len(self.numbers)*[board]; col_list = [x + y for x,y in zip(col_list, self.numbers)] 
         
-        
         if variation=='spill': # if we want to compute the statistics per spill
             # retrieve the spill number in the .root file
             if plot==True:
@@ -62,7 +62,6 @@ class Amplitude(ECAL):
             else:
                 h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
             spill = h1['spill'] 
-            
             spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
             
             # merge the two DataFrames
