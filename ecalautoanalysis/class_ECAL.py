@@ -3,12 +3,10 @@
 import uproot
 import numpy as np
 import pandas as pd
-import glob
+#import glob
 import os
-import h5py
 import awkward as ak
 import plotly.express as px
-import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
@@ -61,6 +59,7 @@ class ECAL:
         self.letters = letters
         
         # for colormesh plots
+        # TODO: delete
         self.X = self.numbers.copy(); self.X.insert(0, '0')
         self.Y = self.letters.copy(); self.Y.insert(0, '0')
 
@@ -115,7 +114,7 @@ class ECAL:
     def __plot_hist(self, df, channel, bin_centers, hist_title, xlabel, ylabel, path, *coeff):
         # TODO: docstring
         trace1 = px.histogram(df, x=channel, nbins=3000) # TODO: label?
-
+        
         d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
         fit_pd = pd.DataFrame(data=d)
         trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=["red"]) # TODO: name/label?
@@ -156,4 +155,20 @@ class ECAL:
             # TODO: check
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=[str(run) for run in self.included_runs]))
                         
+        fig.show()
+        
+    def __plot_colormesh(self, mean, plot_title):
+        #TODO: docstring
+        mean_df = pd.DataFrame(mean)
+        mean_df.columns = self.letters
+        mean_df.index = reversed(self.numbers)
+        
+        fig = px.imshow(mean_df)
+        """
+        fig = px.imshow(mean_df, 
+                        labels=dict(x="Board", y="Channel", color="Mean amplitude"),
+                        x=self.letters,
+                        y=list(reversed(self.numbers)))
+        """
+        fig.update_layout(title=plot_title)
         fig.show()

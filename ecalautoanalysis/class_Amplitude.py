@@ -22,7 +22,7 @@ class Amplitude(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # GENERAL
     
-    def __generate_stats(self, single_run: int=None, board: str=None, variation: str='run', plot: bool=False):
+    def __generate_stats(self, single_run: int=None, board: str=None, variation: str='run', plot: bool=False, spill_index: int=None):
         """
         Generates the statistics for a given board in a run, either when analyzing spills or runs. Can also plot the histogram of the data.
         Statistics of the amplitude (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
@@ -36,7 +36,11 @@ class Amplitude(ECAL):
 
         # Computation with merged data: retrieve the amplitude
         folder =  self.raw_data_folder + str(int(single_run))
-        h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
+        if variation=='spill' and plot==True:
+            h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
+        else:
+            h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
+        
         run_name = os.path.basename(os.path.normpath(folder)) # creating folder to save csv file
         # TODO: delete print or add verbose boolean parameter?
         print('Run: ', run_name)
@@ -53,10 +57,13 @@ class Amplitude(ECAL):
         
         if variation=='spill': # if we want to compute the statistics per spill
             # retrieve the spill number in the .root file
-            h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
+            if plot==True:
+                h1 = uproot.concatenate({folder + f'/{spill_index}.root' : 'h4'}, allow_missing = True)
+            else:
+                h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
             spill = h1['spill'] 
             spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
-
+            
             # merge the two DataFrames
             aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
 
@@ -99,11 +106,12 @@ class Amplitude(ECAL):
                     sigma_arr[i] = sigma
                     sigma_error_arr[i] = sigma_error
                     
-                    if plot: # TODO: add path name
+                    if plot: # TODO: add path name to save the plots
                         title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
                         xlabel = 'Amplitude (??)'
                         ylabel = 'Occurence (a.u.)'
-                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, *coeff)
+                        path = ''
+                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
                 
                 # gather all the statistics for each spill
                 amp_mean_spill[j,:] = mu_arr
@@ -246,7 +254,7 @@ class Amplitude(ECAL):
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
         # Spill column in pd.DataFrame for plot
-        spill_column_tmp = [len(self.numbers)*[i] for i in range(num_spills)]
+        spill_column_tmp = [len(self.numbers)*[i] for i in range(1, num_spills+1)]
         spill_column = []
         for lst in spill_column_tmp:
             spill_column += lst
@@ -293,32 +301,32 @@ class Amplitude(ECAL):
     
     # ---- HISTOGRAMS ----
     
-    def __hist_amplitude_single_board(self, single_run: int=None, board: str=None):
+    def __hist_amplitude_single_board(self, single_run: int=None, board: str=None, variation: str=None, spill_i: int=None):
         """
         Generates the statistics for all the channels on a given board. Plots the corresponding histograms.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
         """
-        self.__generate_stats(single_run, board, 'run', plot=True)
+        self.__generate_stats(single_run, board, variation, plot=True, spill_index=spill_i)
         
 
-    def __hist_amplitude_single_run(self, single_run: int=None):
+    def __hist_amplitude_single_run(self, single_run: int=None, variation: str=None, spill_i: int=None):
         """
         Generates the statistics for all the channels in a given run (loops on all its boards). Plots the corresponding histograms.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         """
         for board in self.letters:
-            self.__hist_amplitude_single_board(single_run, board)
+            self.__hist_amplitude_single_board(single_run, board, variation, spill_i)
         
 
-    def hist_amplitude(self):
+    def hist_amplitude(self, variation: str='run', spill_i: int=None):
         """
         Computes the statistics and plots the corresponding histogram for every single_run in self.included_runs
         """
         for single_run in self.included_runs:
-            self.__hist_amplitude_single_run(single_run)
+            self.__hist_amplitude_single_run(single_run, variation, spill_i)
     
     
     # ---- VARIATION OVER RUNS ----
@@ -342,7 +350,7 @@ class Amplitude(ECAL):
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
         # Run column in pd.DataFrame for plot
-        run_column_tmp = [len(self.numbers)*[run] for run in self.included_runs]
+        run_column_tmp = [len(self.numbers)*[i] for i in np.arange(len(self.included_runs))]
         run_column = []
         for lst in run_column_tmp:
             run_column += lst
@@ -358,7 +366,7 @@ class Amplitude(ECAL):
         
         xlabel = 'Run'
         ylabel = 'Amplitude (??)'
-        plot_title = f'Run {single_run}, board {board}, mean amplitude over runs'
+        plot_title = f'Run {single_run}, Board {board}, mean amplitude over runs'
         
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
     
@@ -395,18 +403,15 @@ class Amplitude(ECAL):
         Path(run_save).mkdir(parents=True, exist_ok=True)
 
         # TODO: do we also want to plot sigma, mu_err, sigma_err? if yes, then change docstring 
-        mean = np.zeros((len(self.letters), len(self.numbers)))
+        mean = np.zeros((len(self.numbers), len(self.letters)))
         for i, board in enumerate(self.letters):
             run_amp_df = self.__load_stats(single_run, board, 'run')
-            mean[i,:] = run_amp_df["mu"]
+            mean[:,i] = np.array(list(reversed(run_amp_df["mu"])))
 
-        plt.figure()
-        c = plt.pcolormesh(self.X, self.Y, mean)
-        cb = plt.colorbar(c)
-        cb.set_label('Mean amplitude over channels (??)')
-        plt.title(f'Mean amplitude, Run: {run_name}')
-        plt.show()
-
+        plot_title = f'Run {single_run}, mean amplitudes'
+        
+        super()._ECAL__plot_colormesh(mean, plot_title)
+        
         
     def run_statistics(self):
         """

@@ -2,22 +2,18 @@
 -study the linearity & (amplitude + time) resolution of the upgraded ECAL
 -implement a way of generating plots in an automatic fashion
 
-// TASKS:
--change units for amplitude
--throw exception if runs in the list included_runs are not coherent (not the same boards)
--check if .csv file generated in load() to avoid generating it twice
--argparse
--DAQ: knowing when the run is finished
--check that the reference channel is included in channel_names
--add another way of computing the time delta in compute_time_delta, without synchronizer (ex. 3 gaussians)
--transpose color mesh?
--update README
--plotly, save images in .html
--reformat docstrings, cf. SPHINX https://www.sphinx-doc.org/en/master/usage/quickstart.html
-https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/blob/master/.gitlab-ci.yml 
-https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/tree/master/docs/source
-https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/blob/master/ecalautoctrl/__init__.py
--save images in png and pdf
+// TASKS: 
+[OK] 1. finish set up as a package
+[~] 2. finish graphs with plotly --> problem with vline and vrect + orca to save save images in png and pdf
+[OK] 3. deploy graphs everywhere
+[OK] 4. implement histogram for spill
+[OK] 5. deploy everywhere
+6. update documentation (mostly conf.py)
+7. implement different way of computing the stats (ex. fit with 3 gaussians)
+8. DAQ: knowing when the run is finished, then analyse the entire run
+9. Update README
+10. put right units for amplitude
+11. exceptions: run n'existe pas, spill n'existe pas, pas d'histogramme pour spill si plus d'un run en argument
 
 
 Name of the exceptions:
@@ -44,6 +40,31 @@ Run: identify why laser power
 -15628: 181 (133)
 -15629: 179
 
-// Tueday week 2: laser power range: 140:005:220
+// Tuesday week 2: laser power range: 140:005:220
 - 15653: 140
 ... 15669
+
+// Wednesday week 2
+https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/tree/master/docs/source
+
+// Thursday week 2
+windows powershell
+ssh ecalgit@lxplus.cern.ch
+Password: ...
+conda activate h4dqm
+pip install -I .
+
+--
+ipython
+import ecalautoanalysis
+edit setup.py with correct package to be imported
+emacs -nw setup.py
+
+cd H4DQM/scripts/
+open runDQM.py, either via emacs -nw runDQM.py
+or type pwd, exit from h4dqm environment
+and in C:\Users\...> scp ecalgit@lxplus.cern.ch: <pwd> /runDQM.py
+password: ...
+to copy back:
+scp runDQM.py ecalgit@lxplus.cern.ch: <pwd> /runDQM.py
+password: ...
