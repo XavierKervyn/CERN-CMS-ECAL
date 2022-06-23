@@ -21,8 +21,5 @@ setup(name='ecalautoanalysis',
       ],
       python_requires=">=3.6",
       install_requires=[
-          'influxdb',
-          'runregistry',
-          'dbs3-client==3.17.0'
       ]
 )
