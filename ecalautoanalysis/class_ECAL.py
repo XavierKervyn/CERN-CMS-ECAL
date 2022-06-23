@@ -34,32 +34,6 @@ def gaussian(x: float=None, *p: tuple) -> float:
     A, mu, sigma = p
     return A * np.exp(-(x -mu)**2/(2*sigma**2))
 
-# TODO: move inside class
-def plot_hist(df, channel, bin_centers, hist_title, xlabel, ylabel, path, *coeff):
-    # TODO: docstring
-    trace1 = px.histogram(df, x=channel, nbins=3000) # TODO: label?
-
-    d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
-    fit_pd = pd.DataFrame(data=d)
-    trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=["red"]) # TODO: name/label?
-
-    fig = make_subplots(specs=[[{"secondary_y": False}]])
-    fig.add_trace(trace1.data[0])
-    fig.add_trace(trace2.data[0], secondary_y=False)
-
-    #fig.add_vline(x=mean, line_dash='dash', line_color='red')
-    #fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
-
-    fig.update_layout(title=hist_title,
-                     xaxis_title=xlabel,
-                     yaxis_title=ylabel,
-                     width=800,
-                     height=600)
-    
-    fig.write_image('test.png')
-    fig.write_image('test.pdf')
-    fig.write_html('test.html')
-    fig.show()
 
 """ Parent Class definition """
 
@@ -83,6 +57,7 @@ class ECAL:
 
         self.numbers = ['1', '2', '3', '4', '5'] # The five channels on each board
         self.included_runs = included_runs
+        self.included_runs.sort() # Sorting the run names
         self.letters = letters
         
         # for colormesh plots
@@ -135,5 +110,50 @@ class ECAL:
             # If inconsistency, raise error
             if set(columns) != set(columns_ref):
                 raise AssertionError("Included runs are not consistent")
+                
+    # TODO: move inside class
+    def __plot_hist(self, df, channel, bin_centers, hist_title, xlabel, ylabel, path, *coeff):
+        # TODO: docstring
+        trace1 = px.histogram(df, x=channel, nbins=3000) # TODO: label?
 
-            
+        d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
+        fit_pd = pd.DataFrame(data=d)
+        trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=["red"]) # TODO: name/label?
+
+        fig = make_subplots(specs=[[{"secondary_y": False}]])
+        fig.add_trace(trace1.data[0])
+        fig.add_trace(trace2.data[0], secondary_y=False)
+
+        #fig.add_vline(x=mean, line_dash='dash', line_color='red')
+        #fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
+
+        fig.update_layout(title=hist_title,
+                         xaxis_title=xlabel,
+                         yaxis_title=ylabel,
+                         width=800,
+                         height=600)
+
+        # TODO: check later how to install orca
+        #fig.write_image('test.png')
+        #fig.write_image('test.pdf')
+        #fig.write_html('test.html')
+        fig.show()
+    
+    def __plot_variation(self, df, variation, xlabel, ylabel, plot_title):
+        # TODO: docstring
+        fig = make_subplots(specs=[[{"secondary_y": False}]])
+        fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
+        
+        # TODO: resize plot?
+        fig.update_layout(title=plot_title,
+                         xaxis_title=xlabel,
+                         yaxis_title=ylabel)
+
+        
+        if variation == 'spill':
+            fig.update_layout(xaxis= dict(tickmode='linear', tick0=1, dtick=1))
+        else:
+            # TODO: check
+            fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=[str(run) for run in self.included_runs]))
+                        
+        fig.show()
