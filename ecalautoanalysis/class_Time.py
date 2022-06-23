@@ -178,7 +178,7 @@ class Time(ECAL):
                             sigma_error_arr[i] = sigma_error
 
                             if plot: # TODO: add path name to save the plots
-                                title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}, Spill {spill}'
+                                title = f'Run: {run_name}, channel: {board+self.numbers[i]}, ref {ref_channel}, spill {spill}'
                                 xlabel = 'Time delta (ps)'
                                 ylabel = 'Occurence (a.u.)'
                                 path = ''
@@ -237,7 +237,7 @@ class Time(ECAL):
                         sigma_error_arr[i] = sigma_error
 
                         if plot: # TODO: add path name to save the plots
-                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}'
+                            title = f'Run: {run_name}, channel: {board+self.numbers[i]}, ref {ref_channel}'
                             xlabel = 'Time delta (ps)'
                             ylabel = 'Occurence (a.u.)'
                             path = ''
@@ -338,7 +338,7 @@ class Time(ECAL):
       
         xlabel = 'Spill'
         ylabel = 'Time delta (ps)'
-        plot_title = f'Run {single_run}, Board {board}, Ref {ref_channel}, mean time delta over spills'
+        plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean time delta over spills'
         
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
         
@@ -457,7 +457,7 @@ class Time(ECAL):
         
         xlabel = 'Run'
         ylabel = 'Time delta (ps)'
-        plot_title = f'Run {single_run}, Board {board}, Ref {ref_channel}, mean time delta over runs'
+        plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean time delta over runs'
         
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
         
@@ -505,7 +505,7 @@ class Time(ECAL):
             run_time_df = self.__load_stats(single_run, board, ref_channel, 'run')
             mean[:,i] = np.array(list(reversed(run_time_df["mu"])))
     
-        plot_title = f'Run {single_run}, Board {board}, Ref {ref_channel}, mean time delta over runs'
+        plot_title = f'Run {single_run}, ref {ref_channel}, mean time delta over runs'
         super()._ECAL__plot_colormesh(mean, plot_title)
 
         

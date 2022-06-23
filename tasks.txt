@@ -5,7 +5,7 @@
 // TASKS: 
 [OK] 1. finish set up as a package
 [~] 2. finish graphs with plotly --> problem with vline and vrect + orca to save save images in png and pdf
-[] 3. deploy graphs everywhere
+[OK] 3. deploy graphs everywhere
 4. implement histogram for spill
 5. deploy everywhere
 6. update documentation (mostly conf.py)
@@ -13,6 +13,8 @@
 8. DAQ: knowing when the run is finished, then analyse the entire run
 9. Update README
 10. put right units for amplitude
+11. exceptions: run n'existe pas, spill n'existe pas, pas d'histogramme pour spill si plus d'un run en argument
+
 
 Name of the exceptions:
 VariationError: included_runs has <= 1 single_runs, impossible to plot variation
