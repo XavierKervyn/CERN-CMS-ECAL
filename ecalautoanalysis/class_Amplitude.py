@@ -246,7 +246,7 @@ class Amplitude(ECAL):
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
         # Spill column in pd.DataFrame for plot
-        spill_column_tmp = [len(self.numbers)*[i] for i in range(num_spills)]
+        spill_column_tmp = [len(self.numbers)*[i] for i in range(1, num_spills+1)]
         spill_column = []
         for lst in spill_column_tmp:
             spill_column += lst
@@ -342,7 +342,7 @@ class Amplitude(ECAL):
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
         # Run column in pd.DataFrame for plot
-        run_column_tmp = [len(self.numbers)*[run] for run in self.included_runs]
+        run_column_tmp = [len(self.numbers)*[i] for i in np.arange(len(self.included_runs))]
         run_column = []
         for lst in run_column_tmp:
             run_column += lst
@@ -355,6 +355,8 @@ class Amplitude(ECAL):
         sigma_stacked = sigma.flatten()
         
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
+        
+        display(plot_df)
         
         xlabel = 'Run'
         ylabel = 'Amplitude (??)'
@@ -395,18 +397,13 @@ class Amplitude(ECAL):
         Path(run_save).mkdir(parents=True, exist_ok=True)
 
         # TODO: do we also want to plot sigma, mu_err, sigma_err? if yes, then change docstring 
-        mean = np.zeros((len(self.letters), len(self.numbers)))
+        mean = np.zeros((len(self.numbers), len(self.letters)))
         for i, board in enumerate(self.letters):
             run_amp_df = self.__load_stats(single_run, board, 'run')
-            mean[i,:] = run_amp_df["mu"]
+            mean[:,i] = np.array(list(reversed(run_amp_df["mu"])))
 
-        plt.figure()
-        c = plt.pcolormesh(self.X, self.Y, mean)
-        cb = plt.colorbar(c)
-        cb.set_label('Mean amplitude over channels (??)')
-        plt.title(f'Mean amplitude, Run: {run_name}')
-        plt.show()
-
+        super()._ECAL__plot_colormesh(mean)
+        
         
     def run_statistics(self):
         """
