@@ -21,7 +21,10 @@ setup(name='ecalautoanalysis',
       ],
       python_requires=">=3.6",
       install_requires=[
-          """
+      ]
+)
+
+"""
           'uproot',
           'numpy',
           'pandas',
@@ -31,5 +34,3 @@ setup(name='ecalautoanalysis',
           'scipy',
           'pathlib',
           'typing' """
-      ]
-)
