@@ -1,6 +1,6 @@
 """ Imports """
 
-from class_ECAL import *
+from .class_ECAL import *
 
 
 """ 2nd Child Class definition """     

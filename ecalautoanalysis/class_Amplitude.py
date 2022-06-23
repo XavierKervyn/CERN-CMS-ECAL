@@ -1,6 +1,6 @@
 """ Imports """
 
-from class_ECAL import *
+from .class_ECAL import *
 
 """ 1st Child Class definition """
 
@@ -103,7 +103,7 @@ class Amplitude(ECAL):
                         title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
                         xlabel = 'Amplitude (??)'
                         ylabel = 'Occurence (a.u.)'
-                        plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, *coeff)
+                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, *coeff)
                 
                 # gather all the statistics for each spill
                 amp_mean_spill[j,:] = mu_arr
@@ -168,7 +168,7 @@ class Amplitude(ECAL):
                     
                     path = plot_save + f'/Run amplitude run {single_run} board {board}'
                     
-                    plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
+                    super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
 
             # convert the arrays into a single Dataframe
             run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
@@ -261,19 +261,13 @@ class Amplitude(ECAL):
         sigma_stacked = sigma_arr.flatten()
         
         plot_df = pd.DataFrame({"spill": spill_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
-        
-        fig = make_subplots(specs=[[{"secondary_y": False}]])
-        fig = px.line(data_frame=plot_df, x='spill', y='mean', error_y="sigma", color='channel')
-
-        # TODO: resize plot?
-        plot_title = f'Run {single_run}, board {board}, mean amplitude over spills'
+      
         xlabel = 'Spill'
         ylabel = 'Amplitude (??)'
-        fig.update_layout(title=plot_title,
-                         xaxis_title=xlabel,
-                         yaxis_title=ylabel,
-                         xaxis= dict(tickmode='linear', tick0=1, dtick=1))
-        fig.show()
+        plot_title = f'Run {single_run}, board {board}, mean amplitude over spills'
+        
+        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
+
     
     
     def __amplitude_spill_single_run(self, single_run: int=None):
@@ -360,22 +354,13 @@ class Amplitude(ECAL):
         mean_stacked = mean.flatten()
         sigma_stacked = sigma.flatten()
         
-        print(run_column)
-        
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
         
-        fig = make_subplots(specs=[[{"secondary_y": False}]])
-        fig = px.line(data_frame=plot_df, x='run', y='mean', error_y="sigma", color='channel')
-
-        # TODO: resize plot?
-        plot_title = f'Board {board}, mean amplitude over runs'
         xlabel = 'Run'
         ylabel = 'Amplitude (??)'
-        fig.update_layout(title=plot_title,
-                         xaxis_title=xlabel,
-                         yaxis_title=ylabel)
-        # TODO: check xticks
-        fig.show()
+        plot_title = f'Run {single_run}, board {board}, mean amplitude over runs'
+        
+        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
     
 
     def variation_amplitude_run(self):

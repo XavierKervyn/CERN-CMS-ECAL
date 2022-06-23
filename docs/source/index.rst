@@ -10,6 +10,10 @@ Welcome to ecalautoanalysis's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+ECAL Analysis
+=============
+.. autoclass:: ecalautoanalysis.Amplitude
+   :members:
 
 
 Indices and tables
