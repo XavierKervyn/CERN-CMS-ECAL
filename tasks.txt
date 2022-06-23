@@ -48,7 +48,7 @@ https://gitlab.cern.ch/cms-ecal-dpg/ECALELFS/automation-control/-/tree/master/do
 // Thursday week 2
 windows powershell
 ssh ecalgit@lxplus.cern.ch
-Password: dpg4PbWO
+Password: ...
 conda activate h4dqm
 pip install -I .
 
@@ -62,7 +62,7 @@ cd H4DQM/scripts/
 open runDQM.py, either via emacs -nw runDQM.py
 or type pwd, exit from h4dqm environment
 and in C:\Users\...> scp ecalgit@lxplus.cern.ch: <pwd> /runDQM.py
-password: dpg4PbWO
+password: ...
 to copy back:
 scp runDQM.py ecalgit@lxplus.cern.ch: <pwd> /runDQM.py
-password: dpg4PbWO
+password: ...
