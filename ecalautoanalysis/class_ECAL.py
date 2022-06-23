@@ -157,7 +157,7 @@ class ECAL:
                         
         fig.show()
         
-    def __plot_colormesh(self, mean):
+    def __plot_colormesh(self, mean, plot_title):
         #TODO: docstring
         mean_df = pd.DataFrame(mean)
         mean_df.columns = self.letters
@@ -170,4 +170,5 @@ class ECAL:
                         x=self.letters,
                         y=list(reversed(self.numbers)))
         """
+        fig.update_layout(title=plot_title)
         fig.show()
