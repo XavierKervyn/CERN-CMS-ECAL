@@ -59,6 +59,7 @@ class ECAL:
         self.letters = letters
         
         # for colormesh plots
+        # TODO: delete
         self.X = self.numbers.copy(); self.X.insert(0, '0')
         self.Y = self.letters.copy(); self.Y.insert(0, '0')
 
@@ -154,4 +155,19 @@ class ECAL:
             # TODO: check
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=[str(run) for run in self.included_runs]))
                         
+        fig.show()
+        
+    def __plot_colormesh(self, mean):
+        #TODO: docstring
+        mean_df = pd.DataFrame(mean)
+        mean_df.columns = self.letters
+        mean_df.index = reversed(self.numbers)
+        
+        fig = px.imshow(mean_df)
+        """
+        fig = px.imshow(mean_df, 
+                        labels=dict(x="Board", y="Channel", color="Mean amplitude"),
+                        x=self.letters,
+                        y=list(reversed(self.numbers)))
+        """
         fig.show()
