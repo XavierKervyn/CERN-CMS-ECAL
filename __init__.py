@@ -1,3 +1,3 @@
 ### Expose selected classes directly from ecalautoanalysis namespace
 from . import ecalautoanalysis
-from .ecalautoanalysis import Time, Amplitude, Amplitude_Delta
+from .ecalautoanalysis import Time_Delta, Amplitude, Amplitude_Delta
