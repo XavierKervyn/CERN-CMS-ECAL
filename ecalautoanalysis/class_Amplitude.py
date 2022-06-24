@@ -237,7 +237,7 @@ class Amplitude(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
     
-    def __amplitude_spill_single_board(self, single_run: int=None, board: str=None): 
+    def __spill_single_board(self, single_run: int=None, board: str=None): 
         """
         Plots the amplitude per spill for a single board of a given single_run
         
@@ -278,22 +278,22 @@ class Amplitude(ECAL):
 
     
     
-    def __amplitude_spill_single_run(self, single_run: int=None):
+    def __spill_single_run(self, single_run: int=None):
         """
         Plots the amplitude per spill for a single_run (loops on its boards)
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         """
         for board in self.letters:
-            self.__amplitude_spill_single_board(single_run, board)
+            self.__spill_single_board(single_run, board)
     
     
-    def variation_amplitude_spill(self):
+    def spill_variation(self):
         """
         Plots the amplitude per spill for all the runs in self.included_runs (loops on all the single_runs)
         """
         for single_run in self.included_runs:
-            self.__amplitude_spill_single_run(single_run)
+            self.__spill_single_run(single_run)
 
             
     # ------------------------------------------------------------------------------------------------------------------------------
@@ -301,7 +301,7 @@ class Amplitude(ECAL):
     
     # ---- HISTOGRAMS ----
     
-    def __hist_amplitude_single_board(self, single_run: int=None, board: str=None, variation: str=None, spill_i: int=None):
+    def __hist_single_board(self, single_run: int=None, board: str=None, variation: str=None, spill_i: int=None):
         """
         Generates the statistics for all the channels on a given board. Plots the corresponding histograms.
         
@@ -311,27 +311,27 @@ class Amplitude(ECAL):
         self.__generate_stats(single_run, board, variation, plot=True, spill_index=spill_i)
         
 
-    def __hist_amplitude_single_run(self, single_run: int=None, variation: str=None, spill_i: int=None):
+    def __hist_single_run(self, single_run: int=None, variation: str=None, spill_i: int=None):
         """
         Generates the statistics for all the channels in a given run (loops on all its boards). Plots the corresponding histograms.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         """
         for board in self.letters:
-            self.__hist_amplitude_single_board(single_run, board, variation, spill_i)
+            self.__hist_single_board(single_run, board, variation, spill_i)
         
 
-    def hist_amplitude(self, variation: str='run', spill_i: int=None):
+    def hist(self, variation: str='run', spill_i: int=None):
         """
         Computes the statistics and plots the corresponding histogram for every single_run in self.included_runs
         """
         for single_run in self.included_runs:
-            self.__hist_amplitude_single_run(single_run, variation, spill_i)
+            self.__hist_single_run(single_run, variation, spill_i)
     
     
     # ---- VARIATION OVER RUNS ----
     
-    def __amplitude_run_single_board(self, board: str=None):
+    def __run_single_board(self, board: str=None):
         """
         Plots the mean amplitude over each single_run of self.included_runs for every channel in a given board
         
@@ -371,7 +371,7 @@ class Amplitude(ECAL):
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
     
 
-    def variation_amplitude_run(self):
+    def run_variation(self):
         """
         Plots the evolution of the mean amplitude over every single_run in self.included_runs.
         Warning: included_runs must be at least of length two.
@@ -381,14 +381,14 @@ class Amplitude(ECAL):
                 raise ValueError('Need at least two runs to plot a variation')
             else:    
                 for board in self.letters:
-                    self.__amplitude_run_single_board(board)
+                    self.__run_single_board(board)
         except ValueError as e:
             print(e)
     
 
     # ---- STATISTICS OVER RUNS ----
     
-    def __run_statistics_single_run(self, single_run: int=None):
+    def __run_colormesh_single_run(self, single_run: int=None):
         """ 
         Plots the colormesh map with the mean amplitude (mu) over self.channel_names for a given single_run.
         Could also do the same with mu error, sigma, sigma error.
@@ -413,9 +413,9 @@ class Amplitude(ECAL):
         super()._ECAL__plot_colormesh(mean, plot_title)
         
         
-    def run_statistics(self):
+    def run_colormesh(self):
         """
         Plots the colormesh map with the mean amplitude over self.channel_names for every single_run in self.included_runs.
         """
         for single_run in self.included_runs:
-            self.__run_statistics_single_run(single_run)
+            self.__run_colormesh_single_run(single_run)
