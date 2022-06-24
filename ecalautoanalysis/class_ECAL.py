@@ -57,11 +57,6 @@ class ECAL:
         self.included_runs = included_runs
         self.included_runs.sort() # Sorting the run names
         self.letters = letters
-        
-        # for colormesh plots
-        # TODO: delete
-        self.X = self.numbers.copy(); self.X.insert(0, '0')
-        self.Y = self.letters.copy(); self.Y.insert(0, '0')
 
         # define channel_names, the access to the 'mesh' with the letters and the numbers
         self.channel_names = []
