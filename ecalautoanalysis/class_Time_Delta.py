@@ -378,6 +378,26 @@ class Time_Delta(ECAL):
         except:
             raise Exception('Could not load nor generate .csv file')
 
+    def get_mean(self, single_run: int=None, board: str=None, ref_channel: str=None):
+        # TODO: docstrings
+        df = self.__load_stats(single_run, board, ref_channel, variation='run')
+        return df["mu"]
+    
+    
+    def get_sigma(self, single_run: int=None, board: str=None, ref_channel: str=None):
+        df = self.__load_stats(single_run, board, ref_channel, variation='run')
+        return df["sigma"]
+    
+    
+    def get_mean_err(self, single_run: int=None, board: str=None, ref_channel: str=None):
+        df = self.__load_stats(single_run, board, ref_channel, variation='run')
+        return df["mu error"]
+    
+    
+    def get_sigma_err(self, single_run: int=None, board: str=None, ref_channel: str=None):
+        df = self.__load_stats(single_run, board, ref_channel, variation='run')
+        return df["sigma error"]
+            
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
 

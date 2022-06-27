@@ -299,7 +299,11 @@ class Amplitude_Delta(ECAL):
                                    + f'/Run amplitude delta run {single_run} board {board} ref {ref_channel}.csv')
         except:
             raise Exception('Could not load nor generate .csv file')
-        
+            
+            
+    def get_mean(self, single_run: int=None, board: str=None, ref_channel: str=None):
+        df = self.__load_stats(single_run, board, ref_channel, variation='run')
+        return df["mu"]
             
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
