@@ -21,24 +21,23 @@ class Time_Delta(ECAL):
                  plot_save_folder: str = plot_save_folder_global):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
 
-    @staticmethod
+        
     def __synchroniser(self, value: float = None) -> float:
         """
         Function to remove the period shift.
         Collects the scattered peaks separated by integer multiples of the clock period to one large peak.
 
-        :param value: list of time deltas for a single channel to synchronize
-        :return: synchronized value
+        :param value: list of time deltas for a single channel to synchronise
+        :return: synchronised value
         """
-        clock_period = 6.238  # nanoseconds
         window_leniency = 0.5  # How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5
         if value > 0:
-            while value > clock_period * window_leniency:
-                value -= clock_period
+            while value > self.clock_period * window_leniency:
+                value -= self.clock_period
         else:
-            while value < (-clock_period * window_leniency):
-                value += clock_period
-        return float(Decimal(value) % Decimal(clock_period))
+            while value < (-self.clock_period * window_leniency):
+                value += self.clock_period
+        return float(Decimal(value) % Decimal(self.clock_period))
 
     def __compute_time_delta(self, time: pd.DataFrame = None, board: str = None, ref_channel: int = None,
                              apply_synchroniser: bool = True) -> pd.DataFrame:
@@ -80,7 +79,8 @@ class Time_Delta(ECAL):
         return time_delta_pd
 
     def __generate_stats(self, single_run: int = None, board: str = None, ref_channel: str = None,
-                         variation: str = None, plot: bool = False, spill_index: int = None):
+                         variation: str = None, plot: bool = False, spill_index: int = None, fit_option: str=None, nb_fits: int=None):
+        # TODO: update dosctring
         """
         Creates the histograms of the time delta for a single run and single board and saves the Gaussian curve fit parameters and errors mu, mu_err, sigma, sigma_err in csv files.
         If variation='run', only one .csv file is created, the columns being the two fit parameters and their errors and the rows being the channels within the board considered.
@@ -140,9 +140,12 @@ class Time_Delta(ECAL):
 
                     for j, spill in enumerate(spill_set):
                         tspill_pd_temp = tspill_pd[tspill_pd.spill_nb == spill]
-
-                        time_delta_pd = self.__compute_time_delta(tspill_pd_temp, board, ref_channel,
-                                                                  apply_synchroniser=False) #TODO: change to True
+                        
+                        if fit_option == 'synchronise':
+                            apply_synchroniser = True
+                        else:
+                            apply_synchroniser = False
+                        time_delta_pd = self.__compute_time_delta(tspill_pd_temp, board, ref_channel, apply_synchroniser)
 
                         # 'empty' arrays to store the statistics of each channel
                         mu_arr = np.zeros(len(self.numbers))
@@ -156,17 +159,53 @@ class Time_Delta(ECAL):
 
                             hist, bin_edges = np.histogram(time_delta_pd[channel], bins=1500)
                             bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
+                            
+                            if fit_option == 'synchronise' or fit_option == None:
+                                # fitting process
+                                mean_guess = np.average(bin_centers, weights=hist)
+                                sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
-                            # fitting process
-                            mean_guess = np.average(bin_centers, weights=hist)
-                            sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
+                                guess = [np.max(hist), mean_guess, sigma_guess]
+                                coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                                mu = coeff[1]
+                                mu_error = np.sqrt(covar[1, 1])
+                                sigma = coeff[2]
+                                sigma_error = np.sqrt(covar[2, 2])
+                            else:
+                                # fitting process with multiple gaussians
+                                guess = []
+                                amp_list = []
+                                mu_list = []
+                                sigma_list = []
+                                mu_error_list = []
+                                sigma_error_list = []
+                                
+                                for index, k in enumerate(np.arange(-(nb_fits-1)/2, (nb_fits+1)/2)):
+                                    mean_guess = np.average(bin_centers, weights=hist) + k*self.clock_period*1000
+                                    sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
+                                    if k == 0:
+                                        amp_guess = np.max(hist)
+                                    else:
+                                        amp_guess = 1
+                                        
+                                    guess += [amp_guess, mean_guess, sigma_guess]
+                                
+                                coeff, covar = curve_fit(multiple_gaussians, bin_centers, hist, p0=guess, maxfev=5000)
+                                
+                                
+                                for index, k in enumerate(np.arange(-(nb_fits-1)/2, (nb_fits+1)/2)):
+                                    amp_list.append(coeff[3*index]) 
+                                    mu_list.append(coeff[3*index+1] - k*self.clock_period*1000)
+                                    sigma_list.append(coeff[3*index+2])
+                                        
+                                mu_error_list = [np.sqrt(covar[m,m]) for m in range(len(coeff)) if m%3 == 1]
+                                sigma_error_list = [np.sqrt(covar[m,m]) for m in range(len(coeff)) if m%3 == 2]
+                                
+                                mu = np.average(mu_list)
+                                sigma = np.average(sigma_list)
+                                mu_error = np.average(mu_error_list)
+                                sigma_error = np.average(sigma_error_list)
 
-                            guess = [np.max(hist), mean_guess, sigma_guess]
-                            coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
-                            mu = coeff[1]
-                            mu_error = np.sqrt(covar[1, 1])
-                            sigma = coeff[2]
-                            sigma_error = np.sqrt(covar[2, 2])
                             mu_arr[i] = mu
                             mu_error_arr[i] = mu_error
                             sigma_arr[i] = sigma
@@ -179,7 +218,7 @@ class Time_Delta(ECAL):
                                 path = ''
                                 super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel,
                                                          path, *coeff)
-
+                                
                         time_mean_spill[j, :] = mu_arr
                         time_mean_err_spill[j, :] = mu_error_arr
                         time_sigma_spill[j, :] = sigma_arr
@@ -202,7 +241,11 @@ class Time_Delta(ECAL):
                                                    + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
 
                 else:  # variation=='run':
-                    time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser=False) #TODO: change to True
+                    if fit_option == 'synchronise':
+                        apply_synchroniser = True
+                    else:
+                        apply_synchroniser = False
+                    time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser)
 
                     # 'empty' arrays to store the statistics of each channel
                     mu_arr = np.zeros(len(self.numbers))
@@ -217,28 +260,64 @@ class Time_Delta(ECAL):
                         hist, bin_edges = np.histogram(time_delta_pd[channel], bins=1500)
                         bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
 
-                        # fitting process
-                        mean_guess = np.average(bin_centers, weights=hist)
-                        sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
+                        if fit_option == 'synchronise' or fit_option == None:
+                            # fitting process
+                            mean_guess = np.average(bin_centers, weights=hist)
+                            sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
-                        guess = [np.max(hist), mean_guess, sigma_guess]
-                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
-                        mu = coeff[1]
-                        mu_error = np.sqrt(covar[1, 1])
-                        sigma = coeff[2]
-                        sigma_error = np.sqrt(covar[2, 2])
+                            guess = [np.max(hist), mean_guess, sigma_guess]
+                            coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                            mu = coeff[1]
+                            mu_error = np.sqrt(covar[1, 1])
+                            sigma = coeff[2]
+                            sigma_error = np.sqrt(covar[2, 2])
+                        else:
+                            # fitting process with multiple gaussians
+                            guess = []
+                            amp_list = []
+                            mu_list = []
+                            sigma_list = []
+                            mu_error_list = []
+                            sigma_error_list = []
+
+                            for index, k in enumerate(np.arange(-(nb_fits-1)/2, (nb_fits+1)/2)):
+                                mean_guess = np.average(bin_centers, weights=hist) + k*self.clock_period*1000
+                                sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
+                                if k == 0:
+                                    amp_guess = np.max(hist)
+                                else:
+                                    amp_guess = 1
+
+                                guess += [amp_guess, mean_guess, sigma_guess]
+
+                            coeff, covar = curve_fit(multiple_gaussians, bin_centers, hist, p0=guess, maxfev=5000)
+                            
+                            for index, k in enumerate(np.arange(-(nb_fits-1)/2, (nb_fits+1)/2)):
+                                amp_list.append(coeff[3*index]) 
+                                mu_list.append(coeff[3*index+1] - k*self.clock_period*1000)
+                                sigma_list.append(coeff[3*index+2])
+
+                            mu_error_list = [np.sqrt(covar[m,m]) for m in range(len(coeff)) if m%3 == 1]
+                            sigma_error_list = [np.sqrt(covar[m,m]) for m in range(len(coeff)) if m%3 == 2]
+
+                            mu = np.average(mu_list)
+                            sigma = np.average(sigma_list)
+                            mu_error = np.average(mu_error_list)
+                            sigma_error = np.average(sigma_error_list)
+                        
                         mu_arr[i] = mu
                         mu_error_arr[i] = mu_error
                         sigma_arr[i] = sigma
                         sigma_error_arr[i] = sigma_error
-
+    
                         if plot:  # TODO: add path name to save the plots
                             title = f'Run: {run_name}, channel: {board + self.numbers[i]}, ref {ref_channel}'
                             xlabel = 'Time delta (ps)'
                             ylabel = 'Occurrence (a.u.)'
                             path = ''
-                            super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel, path,
-                                                     *coeff)
+                           
+                            super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel,
+                                                     path, *coeff)
 
                     # convert the arrays into a single Dataframe
                     run_time_delta_df = pd.DataFrame(
@@ -250,8 +329,8 @@ class Time_Delta(ECAL):
         except ValueError as e:
             print(e)
 
-    def __load_stats(self, single_run: int = None, board: str = None, ref_channel: str = None, variation: str = None) -> \
-    Union[tuple, pd.DataFrame]:
+    def __load_stats(self, single_run: int = None, board: str = None, ref_channel: str = None, variation: str = None, 
+                     fit_option: str=None, nb_fits: int=None) -> Union[tuple, pd.DataFrame]:
         """
         Returns the Gaussian curve fit statistics of the time delta with respect to ref_channel for a single_run and board.
         If variation='run', considers the fit over the entire run, if variation='spill', considers the fit over each spill separately.
@@ -277,10 +356,10 @@ class Time_Delta(ECAL):
             else:  # variation=='run':
                 return pd.read_csv(self.save_folder + f'/Run {single_run}'
                                    + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
-        except FileNotFoundError:
+        
+        except FileNotFoundError: # generating the statistics file
             print('File not found, generating .csv')
-            self.__generate_stats(single_run, board, ref_channel, variation,
-                                  plot=False)  # generating the statistics file
+            self.__generate_stats(single_run, board, ref_channel, variation, plot=False, fit_option=fit_option, nb_fits=nb_fits)  
 
             # loading the file and returning it
             if variation == 'spill':  # returns a tuple with the 4 files
@@ -302,7 +381,8 @@ class Time_Delta(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
 
-    def __spill_single_board(self, single_run: int = None, board: str = None, ref_channel: str = None):
+    def __spill_single_board(self, single_run: int = None, board: str = None, ref_channel: str = None, 
+                             fit_option: str=None, nb_fits: int=None):
         """
         Plots the evolution over the spills in the single_run of the time delta of the channels on the board with
         respect to the ref_channel.
@@ -313,7 +393,7 @@ class Time_Delta(ECAL):
         """
 
         # load the Dataframes
-        mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, ref_channel, 'spill')
+        mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, ref_channel, 'spill', fit_option, nb_fits)
         num_spills = mean.shape[0]  # number of spills in the single run
 
         slicing = [channel for channel in self.channel_names if channel[0] == board]
@@ -342,7 +422,8 @@ class Time_Delta(ECAL):
 
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
 
-    def __spill_single_run(self, single_run: int = None, ref_channel: str = None, all_channels: bool = None):
+    def __spill_single_run(self, single_run: int = None, ref_channel: str = None, all_channels: bool = None, 
+                           fit_option: str=None, nb_fits: int=None):
         """
         Plots the evolution over the spills in the single_run of the time delta of the channels with respect to the ref_channel on one or all the boards depending on all_channels.
 
@@ -352,12 +433,12 @@ class Time_Delta(ECAL):
         """
         if all_channels:
             for board in self.letters:
-                self.__spill_single_board(single_run, board, ref_channel)
+                self.__spill_single_board(single_run, board, ref_channel, fit_option, nb_fits)
         else:
             board = ref_channel[0]
-            self.__spill_single_board(single_run, board, ref_channel)
+            self.__spill_single_board(single_run, board, ref_channel, fit_option, nb_fits)
 
-    def spill_variation(self, ref_channel: str = None, all_channels: bool = None):
+    def spill_variation(self, ref_channel: str = None, all_channels: bool = None, fit_option: str='synchronise', nb_fits: int=None):
         """
         Plots the evolution over the spills in each of the runs in self.included_runs of the time delta of the channels with respect to the ref_channel on one or all the boards, depending on the value of all_channels.
 
@@ -366,7 +447,7 @@ class Time_Delta(ECAL):
         """
 
         for single_run in self.included_runs:
-            self.__spill_single_run(single_run, ref_channel, all_channels)
+            self.__spill_single_run(single_run, ref_channel, all_channels, fit_option, nb_fits)
 
     # ------------------------------------------------------------------------------------------------------------------------------
     # RUNS
@@ -374,7 +455,7 @@ class Time_Delta(ECAL):
     # ---- HISTOGRAMS ----
 
     def __hist_single_board(self, single_run: int = None, board: str = None, ref_channel: str = None,
-                                       variation: str = None, spill_i: int = None):
+                                       variation: str = None, spill_i: int = None, fit_option: str=None, nb_fits: int=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels included in the board with respect to the ref_channel for the single_run considered.
 
@@ -382,10 +463,11 @@ class Time_Delta(ECAL):
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
         """
-        self.__generate_stats(single_run, board, ref_channel, variation, plot=True, spill_index=spill_i)
+        self.__generate_stats(single_run, board, ref_channel, variation, plot=True, spill_index=spill_i, 
+                              fit_option=fit_option, nb_fits=nb_fits)
 
     def __hist_single_run(self, single_run: int = None, ref_channel: str = None, all_channels: bool = None,
-                                     variation: str = None, spill_i: int = None):
+                                     variation: str = None, spill_i: int = None, fit_option: str=None, nb_fits: int=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with respect to the ref_channel for the single_run considered.
         The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels.
@@ -396,13 +478,13 @@ class Time_Delta(ECAL):
         """
         if all_channels:
             for board in self.letters:
-                self.__hist_single_board(single_run, board, ref_channel, variation, spill_i)
+                self.__hist_single_board(single_run, board, ref_channel, variation, spill_i, fit_option, nb_fits)
         else:
             board = ref_channel[0]
-            self.__hist_single_board(single_run, board, ref_channel, variation, spill_i)
+            self.__hist_single_board(single_run, board, ref_channel, variation, spill_i, fit_option, nb_fits)
 
     def hist(self, ref_channel: str = None, all_channels: bool = None, variation: str = 'run',
-                        spill_i: int = None):
+                        spill_i: int = None, fit_option: str='synchronise', nb_fits: int=None):
         """
         Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with respect to the ref_channel for the single_run considered.
         The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels.
@@ -411,11 +493,11 @@ class Time_Delta(ECAL):
         :param all_channels: If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         """
         for single_run in self.included_runs:
-            self.__hist_single_run(single_run, ref_channel, all_channels, variation, spill_i)
+            self.__hist_single_run(single_run, ref_channel, all_channels, variation, spill_i, fit_option, nb_fits)
 
     # ---- VARIATION OVER RUNS ----
 
-    def __run_single_board(self, board: str = None, ref_channel: str = None):
+    def __run_single_board(self, board: str = None, ref_channel: str = None, fit_option: str=None, nb_fits: int=None):
         """
         Plots the evolution over the runs of the time delta of the channels on the board with respect to the ref_channel.
 
@@ -427,7 +509,7 @@ class Time_Delta(ECAL):
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
         for i, single_run in enumerate(self.included_runs):
-            run_time_delta_df = self.__load_stats(single_run, board, ref_channel, 'run')  # 4 columns, n_numbers rows
+            run_time_delta_df = self.__load_stats(single_run, board, ref_channel, 'run', fit_option, nb_fits)  # 4 columns, n_numbers rows
             mean[i, :] = run_time_delta_df['mu']
             sigma[i, :] = run_time_delta_df['sigma']
 
@@ -455,7 +537,7 @@ class Time_Delta(ECAL):
 
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
 
-    def run_variation(self, ref_channel: str = None, all_channels: bool = None):
+    def run_variation(self, ref_channel: str = None, all_channels: bool = None, fit_option: str='synchronise', nb_fits: int=None):
         """
         Plots the evolution over the runs in self.included_runs of the time delta of the channels with respect to the ref_channel on one or all the boards, depending on the value of all_channels.
 
@@ -468,16 +550,16 @@ class Time_Delta(ECAL):
             else:
                 if all_channels:
                     for board in self.letters:
-                        self.__run_single_board(board, ref_channel)
+                        self.__run_single_board(board, ref_channel, fit_option, nb_fits)
                 else:
                     board = ref_channel[0]
-                    self.__run_single_board(board, ref_channel)
+                    self.__run_single_board(board, ref_channel, fit_option, nb_fits)
         except ValueError as e:
             print(e)
 
     # ---- STATISTICS OVER RUNS ----
 
-    def __run_colormesh_single_run(self, single_run: int = None, ref_channel: str = None):
+    def __run_colormesh_single_run(self, single_run: int = None, ref_channel: str = None, fit_option: str=None, nb_fits: int=None):
         """
         Plots mean mu for the time delta with respect to ref_channel of a designated single_run in a colormesh plot.
         The mesh represents all the channels and the color represents the time delta.
@@ -495,13 +577,13 @@ class Time_Delta(ECAL):
         # TODO: do we also want to plot sigma, mu_err, sigma_err?
         mean = np.zeros((len(self.numbers), len(self.letters)))
         for i, board in enumerate(self.letters):
-            run_time_df = self.__load_stats(single_run, board, ref_channel, 'run')
+            run_time_df = self.__load_stats(single_run, board, ref_channel, 'run', fit_option, nb_fits)
             mean[:, i] = np.array(list(reversed(run_time_df["mu"])))
 
         plot_title = f'Run {single_run}, ref {ref_channel}, mean time delta over runs'
         super()._ECAL__plot_colormesh(mean, plot_title)
 
-    def run_colormesh(self, ref_channel: str = None):
+    def run_colormesh(self, ref_channel: str = None, fit_option: str='synchronise', nb_fits: int=None):
         """
         Plots mean mu for the time delta with respect to ref_channel of the runs in self.included_runs in
         colormesh plots. The mesh represents all the channels and the color represents the time delta.
@@ -509,4 +591,4 @@ class Time_Delta(ECAL):
         :param ref_channel: reference channel with respect to which the differences are computed
         """
         for single_run in self.included_runs:
-            self.__run_colormesh_single_run(single_run, ref_channel)
+            self.__run_colormesh_single_run(single_run, ref_channel, fit_option, nb_fits)

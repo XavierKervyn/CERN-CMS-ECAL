@@ -33,6 +33,16 @@ def gaussian(x: float=None, *p: tuple) -> float:
     return A * np.exp(-(x -mu)**2/(2*sigma**2))
 
 
+def multiple_gaussians(x, *p):
+    # TODO: docstring
+    n_fit = int(len(p)/3)
+    res = 0
+    for i in range(n_fit):
+        coeff = [p[i*3], p[i*3+1], p[i*3+2]]
+        res += gaussian(x, *coeff)
+    return res
+
+
 """ Parent Class definition """
 
 class ECAL:
@@ -57,6 +67,7 @@ class ECAL:
         self.included_runs = included_runs
         self.included_runs.sort() # Sorting the run names
         self.letters = letters
+        self.clock_period = 6.238  # nanoseconds
 
         # define channel_names, the access to the 'mesh' with the letters and the numbers
         self.channel_names = []
@@ -109,13 +120,16 @@ class ECAL:
     def __plot_hist(self, df, channel, bin_centers, hist_title, xlabel, ylabel, path, *coeff):
         # TODO: docstring
         trace1 = px.histogram(df, x=channel, nbins=3000) # TODO: label?
-        
-        d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
-        fit_pd = pd.DataFrame(data=d)
-        trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=["red"]) # TODO: name/label?
-
         fig = make_subplots(specs=[[{"secondary_y": False}]])
         fig.add_trace(trace1.data[0])
+        
+        if len(coeff) == 3:
+            d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
+        else:
+            d = {'x': bin_centers, 'y': multiple_gaussians(bin_centers, *coeff)}
+            
+        fit_pd = pd.DataFrame(data=d)
+        trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=['red']) # TODO: name/label?
         fig.add_trace(trace2.data[0], secondary_y=False)
 
         #fig.add_vline(x=mean, line_dash='dash', line_color='red')
@@ -132,7 +146,7 @@ class ECAL:
         #fig.write_image('test.pdf')
         #fig.write_html('test.html')
         fig.show()
-    
+
     def __plot_variation(self, df, variation, xlabel, ylabel, plot_title):
         # TODO: docstring
         fig = make_subplots(specs=[[{"secondary_y": False}]])
