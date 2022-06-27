@@ -4,6 +4,10 @@ from .class_ECAL import *
 
 """ 1st Child Class definition """
 
+def sigma_amp_fit(A, *p):
+    N, s, c = p
+    return np.sqrt( (N/A)**2 + (s**2/A) + c**2 )
+
 class Amplitude(ECAL):
     """
     This class is for the analysis of the amplitudes (not the resolution, cf. class Amplitude_Delta for this purpose).
@@ -438,3 +442,40 @@ class Amplitude(ECAL):
         """
         for single_run in self.included_runs:
             self.__run_colormesh_single_run(single_run)
+            
+            
+# ----------------------------------------------------------------------------------
+
+    def resolution(self, board):
+        # TODO: docstring
+        # TODO: exception if only 1 run, check board is within the channels in self.letters
+        A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        
+        for i, single_run in enumerate(self.included_runs):
+            A_lst[i] = self.get_mean(single_run, board)
+            sigma_lst[i] = self.get_sigma(single_run, board)
+            A_err_lst[i] = self.get_mean_err(single_run, board)
+            sigma_err_lst[i] = self.get_sigma_err(single_run, board)
+
+        for j, channel in enumerate([board+number for number in self.numbers]):
+            if j == 0: # TODO: channel C1 is not working properly
+                continue
+            guess = [3e-4, 2, 0.04] # TODO: change?
+            coeff, covar = curve_fit(sigma_amp_fit, A_lst[:,j], sigma_lst[:,j]/A_lst[:,j], p0=guess)
+
+            plt.figure()
+
+            x = np.linspace(np.min(A_lst[:,j]), np.max(A_lst[:,j]))
+            plt.plot(x, sigma_amp_fit(x, *coeff), label='fit')
+
+            yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
+            plt.errorbar(A_lst[:,j], sigma_lst[:,j]/A_lst[:,j], xerr=A_err_lst[:,j], yerr=yerror, label="Data")
+
+            plt.title(f"Amplitude relative resolution, channel {channel}")
+            plt.xlabel("A (ADC count)")
+            plt.ylabel(r"$\frac{\sigma_A}{A}$")
+            plt.legend(loc="best")
+            plt.show()
