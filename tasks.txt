@@ -15,6 +15,7 @@
 [OK] 10. put right units for amplitude
 11. exceptions: run n'existe pas, spill n'existe pas, pas d'histogramme pour spill si plus d'un run en argument
 12. resolution en fonction de l'amplitude pour time et amplitude delta
+13. mention why errorbars are not visible on plots in the report
 
 Name of the exceptions:
 VariationError: included_runs has <= 1 single_runs, impossible to plot variation
