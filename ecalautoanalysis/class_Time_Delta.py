@@ -142,7 +142,7 @@ class Time_Delta(ECAL):
                         tspill_pd_temp = tspill_pd[tspill_pd.spill_nb == spill]
 
                         time_delta_pd = self.__compute_time_delta(tspill_pd_temp, board, ref_channel,
-                                                                  apply_synchroniser=True)
+                                                                  apply_synchroniser=False) #TODO: change to True
 
                         # 'empty' arrays to store the statistics of each channel
                         mu_arr = np.zeros(len(self.numbers))
@@ -202,7 +202,7 @@ class Time_Delta(ECAL):
                                                    + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
 
                 else:  # variation=='run':
-                    time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser=True)
+                    time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser=False) #TODO: change to True
 
                     # 'empty' arrays to store the statistics of each channel
                     mu_arr = np.zeros(len(self.numbers))
