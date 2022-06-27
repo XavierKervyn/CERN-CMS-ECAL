@@ -9,10 +9,10 @@
 [OK] 4. implement histogram for spill
 [OK] 5. deploy everywhere
 6. update documentation (mostly conf.py)
-[~] 7. implement different way of computing the stats (ex. fit with 3 gaussians)
+[~] 7. implement different way of computing the stats (ex. fit with 3 gaussians) --> problem with the fit, TO DISCUSS
 8. DAQ: knowing when the run is finished, then analyse the entire run
 9. Update README
-10. put right units for amplitude
+[OK] 10. put right units for amplitude
 11. exceptions: run n'existe pas, spill n'existe pas, pas d'histogramme pour spill si plus d'un run en argument
 12. resolution en fonction de l'amplitude pour time et amplitude delta
 

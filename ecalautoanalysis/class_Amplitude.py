@@ -108,7 +108,7 @@ class Amplitude(ECAL):
                     
                     if plot: # TODO: add path name to save the plots
                         title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
-                        xlabel = 'Amplitude (??)'
+                        xlabel = 'Amplitude (ADC counts)'
                         ylabel = 'Occurence (a.u.)'
                         path = ''
                         super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
@@ -168,7 +168,7 @@ class Amplitude(ECAL):
                 
                 if plot:
                     title = f'Run: {run_name}, Channel: {board+self.numbers[i]}'
-                    xlabel = 'Amplitude (??)'
+                    xlabel = 'Amplitude (ADC counts)'
                     ylabel = 'Occurence (a.u.)'
                     
                     plot_save = self.plot_save_folder + f'/Run {single_run}'
@@ -271,7 +271,7 @@ class Amplitude(ECAL):
         plot_df = pd.DataFrame({"spill": spill_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
       
         xlabel = 'Spill'
-        ylabel = 'Amplitude (??)'
+        ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, mean amplitude over spills'
         
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
@@ -365,7 +365,7 @@ class Amplitude(ECAL):
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
         
         xlabel = 'Run'
-        ylabel = 'Amplitude (??)'
+        ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, Board {board}, mean amplitude over runs'
         
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)

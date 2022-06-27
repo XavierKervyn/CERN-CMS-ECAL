@@ -159,7 +159,7 @@ class Amplitude_Delta(ECAL):
 
                             if plot:
                                 title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}, Spill {spill}'
-                                xlabel = 'Amplitude delta (??)'
+                                xlabel = 'Amplitude delta (ADC counts)'
                                 ylabel = 'Occurence (a.u.)'
                                 path = ''
                                 super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
@@ -223,7 +223,7 @@ class Amplitude_Delta(ECAL):
 
                         if plot:
                             title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}, Run {single_run}'
-                            xlabel = 'Amplitude delta (??)'
+                            xlabel = 'Amplitude delta (ADC counts)'
                             ylabel = 'Occurence (a.u.)'
                             path = ''
                             super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
@@ -337,7 +337,7 @@ class Amplitude_Delta(ECAL):
         plot_df = pd.DataFrame({"spill": spill_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
       
         xlabel = 'Spill'
-        ylabel = 'Amplitude delta (??)'
+        ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean amplitude delta over spills'
         
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
@@ -456,7 +456,7 @@ class Amplitude_Delta(ECAL):
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
         
         xlabel = 'Run'
-        ylabel = 'Amplitude delta (??)'
+        ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean amplitude over runs'
         
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
