@@ -621,7 +621,7 @@ class Time_Delta(ECAL):
             
 # --------------------------------------------------------------------------------------
 
-    def resolution(self, board, ref_channel):
+    def __resolution_single_board(self, board, ref_channel):
         # TODO: docstring
         # TODO: exception if bad ref_channel or board
         # TODO: create new array if ref_channel not in board
@@ -648,10 +648,10 @@ class Time_Delta(ECAL):
         A2 = A_ref_lst[:,int(ref_channel[1])-1]
         dA2 = A_ref_err_lst[:,int(ref_channel[1])-1]
 
-        plt.figure()
-
         for j, channel in enumerate([board+number for number in self.numbers]):
-            if j != 1: # TODO: remove
+            if j == 0: # TODO: remove
+                continue
+            if channel == ref_channel:
                 continue
             A1 = A_lst[:,j]
             dA1 = A_err_lst[:,j]
@@ -659,23 +659,51 @@ class Time_Delta(ECAL):
 
             guess = [100000, 50]
             coeff, covar = curve_fit(sigma_t_fit, x, sigma_lst[:,j], p0=guess, maxfev=5000)
-            print("coeff =", coeff)
 
-            xx = np.linspace(np.min(x), np.max(x))
-            plt.plot(xx, sigma_t_fit(xx, *coeff), label='fit')
-
+            fig = make_subplots(specs=[[{"secondary_y": False}]])
+            
             xerror = x * (dA1/A1 + dA2/A2 + (A1*dA1 + A2*dA2)/(A1**2 + A2**2))
             yerror = sigma_err_lst[:,j]
-            plt.errorbar(x, sigma_lst[:,j], xerr=xerror, yerr=yerror, fmt='.', label="Data")
+            df_data = pd.DataFrame({'x': x, 'y': sigma_lst[:,j], "err_x": xerror, "err_y": yerror})
+            trace1 = px.scatter(data_frame=df_data, x='x', y='y', error_x="err_x", error_y="err_y", color_discrete_sequence=["Crimson"], labels={
+                     "y": r"$\sigma_{\Delta t}$ (ps)"
+                 })
+            fig.add_trace(trace1.data[0])
+            
+            xx = np.linspace(np.min(x), np.max(x))
+            df_fit = pd.DataFrame({'x': xx, 'y': sigma_t_fit(xx, *coeff)})
+            trace2 = px.line(df_fit, x='x', y='y')
+            fig.add_trace(trace2.data[0], secondary_y=False)
+            
+            plot_title = f"Time delta absolute resolution, ref {ref_channel}, channel {channel}"
+            xlabel = "Average amplitude A (ADC counts)"
+            ylabel = "Absolute time resolution (ps)"
+            
+            fig.update_layout(title=plot_title,
+                              xaxis=dict(title=xlabel),
+                              yaxis=dict(title=ylabel),
+                              updatemenus=[
+                                           dict(
+                                               buttons = [
+                                                           dict(label="Linear",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                           dict(label="Semilog y",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                           dict(label="Loglog",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                         ]
+                                                )
+                                            ]
+                             );
+                    
+            
+            fig.show()
 
 
-            plt.title(f"Time delta absolute resolution, ref {ref_channel}, channel {channel}")
-            plt.xlabel("Average A (ADC counts)")
-            #plt.ylabel(r"$\sigma_{\Delta t}/A$")
-            #plt.ylabel(r"$\sigma_{\Delta t}/\Delta t$")
-            plt.ylabel(r"$\sigma_{\Delta t}$ (ps)")
-            plt.xscale("log")
-            plt.yscale("log")
-            plt.legend(loc="best")
-
-            plt.show()
+    def resolution(self, ref_channel):
+        # TODO: docstring
+        for board in self.letters:
+            self.__resolution_single_board(board, ref_channel)
