@@ -204,8 +204,12 @@ class ECAL:
                                           ticktext=[str(run) for run in self.included_runs]))
         # TODO: add path to figure to be saved
         # TODO: save figures
-        fig.show()
-        
+        """
+        fig.write_image(path+'mean_amplitude.png')
+        fig.write_image(path+'mean_amplitude.pdf')
+        fig.write_image(path+'mean_amplitude.svg')
+        fig.write_html(path+'mean_amplitude.html')
+        """
         
     def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None):
         """
@@ -228,10 +232,9 @@ class ECAL:
 
         fig.update_layout(title=plot_title)
         
-        # TODO: add path to figure to be saved
-        # TODO: save figure
-        fig.write_image(path+'.png')
-        fig.write_image(path+'.pdf')
-        fig.write_html(path+'.html')
-        #fig.show()
+
+        fig.write_image(path+'mean_amplitude.png')
+        fig.write_image(path+'mean_amplitude.pdf')
+        fig.write_image(path+'mean_amplitude.svg')
+        fig.write_html(path+'mean_amplitude.html')
         
