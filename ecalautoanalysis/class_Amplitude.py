@@ -498,8 +498,8 @@ class Amplitude(ECAL):
 
         plot_title = f'Run {single_run}, mean amplitudes'
         
-        # TODO: add path to figure to be saved
-        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/amplitude_colormesh'
+        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
         super()._ECAL__plot_colormesh(mean, plot_title, plot_save)
         
         
