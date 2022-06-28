@@ -224,7 +224,7 @@ class Amplitude_Delta(ECAL):
                         sigma_error_arr[i] = sigma_error
 
                         if plot:
-                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}, Run {single_run}'
+                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}'
                             xlabel = 'Amplitude delta (ADC counts)'
                             ylabel = 'Occurence (a.u.)'
                             path = ''
