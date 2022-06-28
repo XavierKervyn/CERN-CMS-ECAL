@@ -117,8 +117,7 @@ class Time_Delta(ECAL):
         :param variation: either 'run' (histograms are computed over a full run) or 'spill' (separately for each spill in single_run).
         :param plot: If True, plots the histograms and fit, not if False
         :param spill_index: integer corresponding to the spill to consider, eg. 3 for the third one.
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         # TODO: create exception for spill_index
@@ -369,8 +368,7 @@ class Time_Delta(ECAL):
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
         :param variation: either 'run' (loads the statistics for the entire run) or 'spill' (for each spill).
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
 
         :return: DataFrame of tuple of DataFrame of the .csv file(s) loaded (TODO: unique type?)
@@ -481,8 +479,7 @@ class Time_Delta(ECAL):
         :param single_run: the number of a run, for example '15610'
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         # load the Dataframes
@@ -525,10 +522,8 @@ class Time_Delta(ECAL):
 
         :param single_run: the number of a run, for example '15610'
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param all_channels: True (plots of the time delta evolution with respect to ref_channel for all boards), 
-        False (only for the board of ref_channel).
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param all_channels: True (plots of the time delta evolution with respect to ref_channel for all boards), False (only for the board of ref_channel).
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         if all_channels:
@@ -546,10 +541,8 @@ class Time_Delta(ECAL):
         choose a different way of computing the statistics. 
 
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param all_channels: True (plots of the time delta evolution with respect to ref_channel for all boards), 
-        False (only for the board of ref_channel).
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param all_channels: True (plots of the time delta evolution with respect to ref_channel for all boards), False (only for the board of ref_channel).
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         for single_run in self.included_runs:
@@ -573,8 +566,7 @@ class Time_Delta(ECAL):
         :param ref_channel: reference channel with respect to which the differences are computed
         :param variation: either 'run' (loads the statistics for the entire run) or 'spill' (for each spill).
         :param spill_i: integer corresponding to the spill to consider, eg. 3 for the third one.
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         self.__generate_stats(single_run, board, ref_channel, variation, plot=True, spill_index=spill_i, 
@@ -611,8 +603,7 @@ class Time_Delta(ECAL):
         :param all_channels: If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.
         :param variation: either 'run' (loads the statistics for the entire run) or 'spill' (for each spill).
         :param spill_i: integer corresponding to the spill to consider, eg. 3 for the third one.
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         for single_run in self.included_runs:
@@ -628,8 +619,7 @@ class Time_Delta(ECAL):
 
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         # load the Dataframes
@@ -673,8 +663,7 @@ class Time_Delta(ECAL):
 
         :param ref_channel: reference channel with respect to which the differences are computed
         :param all_channels: If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         try:
@@ -725,8 +714,7 @@ class Time_Delta(ECAL):
         colormesh plots. The mesh represents all the channels and the color represents the time delta.
 
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
-        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         for single_run in self.included_runs:

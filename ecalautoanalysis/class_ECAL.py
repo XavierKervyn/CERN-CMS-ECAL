@@ -173,7 +173,7 @@ class ECAL:
         fig.show()
 
         
-    def __plot_variation(self, df: pd.DataFame=None, variation: str=None,
+    def __plot_variation(self, df: pd.DataFrame=None, variation: str=None,
                          xlabel: str=None, ylabel: str=None, plot_title: str=None):
         """
         Plots the variation either over runs or spills of the DataFrame. Title and labels of the axes are included 

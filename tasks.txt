@@ -8,7 +8,7 @@
 [OK] 3. deploy graphs everywhere
 [OK] 4. implement histogram for spill
 [OK] 5. deploy everywhere
-6. update documentation (mostly conf.py)
+[OK] 6. update documentation (mostly conf.py)
 [~] 7. implement different way of computing the stats (ex. fit with 3 gaussians) --> problem with the fit, TO DISCUSS
 8. DAQ: knowing when the run is finished, then analyse the entire run
 9. Update README
