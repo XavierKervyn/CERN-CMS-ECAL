@@ -2,8 +2,14 @@
 
 from .class_ECAL import *
 
+from .class_Amplitude import *
+
 """ 2nd Child Class definition """
 
+def sigma_t_fit(A, *p):
+    sigma_N = 1 # TODO: calculate actual pedestal sigma
+    N, c = p
+    return np.sqrt( (N*sigma_N/A)**2 + c**2 )
 
 class Time_Delta(ECAL):
     """
@@ -612,3 +618,64 @@ class Time_Delta(ECAL):
         """
         for single_run in self.included_runs:
             self.__run_colormesh_single_run(single_run, ref_channel, fit_option, nb_fits)
+            
+# --------------------------------------------------------------------------------------
+
+    def resolution(self, board, ref_channel):
+        # TODO: docstring
+        # TODO: exception if bad ref_channel or board
+        # TODO: create new array if ref_channel not in board
+        
+        a = Amplitude(self.included_runs, self.letters)
+        
+        A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        
+        A_ref_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        A_ref_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+
+        for i, single_run in enumerate(self.included_runs):
+            A_lst[i] = a.get_mean(single_run, board)
+            sigma_lst[i] = np.abs(self.get_sigma(single_run, board, ref_channel))
+            A_err_lst[i] = a.get_mean_err(single_run, board)
+            sigma_err_lst[i] = np.abs(self.get_sigma_err(single_run, board, ref_channel))
+
+            A_ref_lst[i] = a.get_mean(single_run, ref_channel[0])
+            A_ref_err_lst[i] = a.get_mean_err(single_run, ref_channel[0])
+
+        A2 = A_ref_lst[:,int(ref_channel[1])-1]
+        dA2 = A_ref_err_lst[:,int(ref_channel[1])-1]
+
+        plt.figure()
+
+        for j, channel in enumerate([board+number for number in self.numbers]):
+            if j != 1: # TODO: remove
+                continue
+            A1 = A_lst[:,j]
+            dA1 = A_err_lst[:,j]
+            x = A1*A2 / np.sqrt(A1**2 + A2**2)
+
+            guess = [100000, 50]
+            coeff, covar = curve_fit(sigma_t_fit, x, sigma_lst[:,j], p0=guess, maxfev=5000)
+            print("coeff =", coeff)
+
+            xx = np.linspace(np.min(x), np.max(x))
+            plt.plot(xx, sigma_t_fit(xx, *coeff), label='fit')
+
+            xerror = x * (dA1/A1 + dA2/A2 + (A1*dA1 + A2*dA2)/(A1**2 + A2**2))
+            yerror = sigma_err_lst[:,j]
+            plt.errorbar(x, sigma_lst[:,j], xerr=xerror, yerr=yerror, fmt='.', label="Data")
+
+
+            plt.title(f"Time delta absolute resolution, ref {ref_channel}, channel {channel}")
+            plt.xlabel("Average A (ADC counts)")
+            #plt.ylabel(r"$\sigma_{\Delta t}/A$")
+            #plt.ylabel(r"$\sigma_{\Delta t}/\Delta t$")
+            plt.ylabel(r"$\sigma_{\Delta t}$ (ps)")
+            plt.xscale("log")
+            plt.yscale("log")
+            plt.legend(loc="best")
+
+            plt.show()
