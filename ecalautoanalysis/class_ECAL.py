@@ -207,7 +207,7 @@ class ECAL:
         fig.show()
         
         
-    def __plot_colormesh(self, mean: np.array=None, plot_title: str=None):
+    def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None):
         """
         Plots a 2D colormesh map of the mean of a given quantity (amplitude, amplitude difference, time difference) over all channels
         and boards.
@@ -217,26 +217,21 @@ class ECAL:
         """
         mean_df = pd.DataFrame(mean)
         mean_df.columns = self.letters
-        mean_df.index = reversed(self.numbers)
-        display(mean_df)
+        indices = list(reversed(self.numbers))
+        mean_df.index = indices
         
         fig = px.imshow(mean_df,
                         labels=dict(x="Board", y="Channel"),
                         x=self.letters,
-                        y=reversed(self.numbers)
+                        y=indices
                        )
-        
-        # TODO: add label
-        """
-        fig = px.imshow(mean_df,
-                        labels=dict(x="Board", y="Channel"),
-                        x=self.letters,
-                        y=reversed(self.numbers)
-                       )
-        """
+
         fig.update_layout(title=plot_title)
         
         # TODO: add path to figure to be saved
         # TODO: save figure
-        fig.show()
+        fig.write_image(path+'.png')
+        fig.write_image(path+'.pdf')
+        fig.write_html(path+'.html')
+        #fig.show()
         
