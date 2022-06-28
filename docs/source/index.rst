@@ -12,9 +12,18 @@ Welcome to ecalautoanalysis's documentation!
 
 ECAL Analysis
 =============
-.. autoclass:: ecalautoanalysis.Amplitude
+.. autoclass:: ecalautoanalysis.ECAL
    :members:
 
+.. autoclass:: ecalautoanalysis.Amplitude
+   :members:
+   
+.. autoclass:: ecalautoanalysis.Amplitude_Delta
+    :members:
+
+.. autoclass:: ecalautoanalysis.Time_Delta
+    :members:
+   
 
 Indices and tables
 ==================
