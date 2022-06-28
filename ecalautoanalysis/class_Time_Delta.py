@@ -153,14 +153,13 @@ class Time_Delta(ECAL):
                 if variation == 'spill':
                     # Computation with merged data: retrieve the spill number
                     if plot:
+                        if spill_index not in spill_pd["spill_nb"]: # raises an exception if the index references a non-existing spill
+                            raise ValueError("There is no spill in the data for the given spill_index")
                         h1 = uproot.concatenate({folder + f'/{spill_index}.root': 'h4'}, allow_missing=True)
                     else:
                         h1 = uproot.concatenate({folder + '/*.root': 'h4'}, allow_missing=True)
                     spill = h1['spill']
                     spill_pd = pd.DataFrame(spill, columns=["spill_nb"])
-                    
-                    if spill_index not in spill_pd["spill_nb"]: # raises an exception if the index references an non-existing spill
-                        raise ValueError("There is no spill in the data for the given spill_index")
 
                     # merge the two Dataframes
                     tspill_pd = pd.concat([time_pd, spill_pd], axis=1, join='inner')
