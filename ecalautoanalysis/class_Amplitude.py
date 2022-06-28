@@ -52,158 +52,168 @@ class Amplitude(ECAL):
         :param variation: ('run' or 'spill') computing the statistics per run or spill
         :param plot: boolean. If True, the histogram of the data is plotted.
         """
-        folder =  self.raw_data_folder + str(int(single_run))
+        try:
+            if board not in self.letters:
+                raise ValueError("Board must be included in the list of letters")
+                
+            folder =  self.raw_data_folder + str(int(single_run))
 
-        # Computation with merged data: retrieve the amplitude
-        folder =  self.raw_data_folder + str(int(single_run))
-        if variation=='spill' and plot==True:
-            h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
-        else:
-            h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
-        
-        run_name = os.path.basename(os.path.normpath(folder)) # creating folder to save csv file
-        # TODO: delete print or add verbose boolean parameter?
-        print('Run: ', run_name)
-        run_save = self.save_folder + '/Run ' + run_name + '/'
-        Path(run_save).mkdir(parents=True, exist_ok=True) # folder created
-        
-        # retrieve only the channels for the given board
-        slicing = [channel for channel in self.channel_names if channel[0] == board]
-        amp = h2['amp_max'] # retrieve the amplitude in the .root file
-        amp_pd = pd.DataFrame(amp, columns=self.channel_names)[slicing]
-        
-        # column header
-        col_list = len(self.numbers)*[board]; col_list = [x + y for x,y in zip(col_list, self.numbers)] 
-        
-        if variation=='spill': # if we want to compute the statistics per spill
-            # retrieve the spill number in the .root file
-            if plot==True:
-                h1 = uproot.concatenate({folder + f'/{spill_index}.root' : 'h4'}, allow_missing = True)
+            # Computation with merged data: retrieve the amplitude
+            folder =  self.raw_data_folder + str(int(single_run))
+            if variation=='spill' and plot==True:
+                try:
+                    h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
+                except FileNotFoundError as e:
+                    print(e)
+                    return -1
             else:
-                h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
-            spill = h1['spill'] 
-            spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
-            
-            # merge the two DataFrames
-            aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
+                h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
 
-            # create empty matrices to store the statistics
-            spill_set = set(aspill_pd["spill_nb"]) # to get a set of unique spill numbers
-            amp_mean_spill = np.zeros((len(spill_set), len(self.numbers)))
-            amp_mean_err_spill = np.zeros((len(spill_set), len(self.numbers)))
-            amp_sigma_spill = np.zeros((len(spill_set), len(self.numbers)))
-            amp_sigma_err_spill = np.zeros((len(spill_set), len(self.numbers)))
+            run_name = os.path.basename(os.path.normpath(folder)) # creating folder to save csv file
+            print('Run: ', run_name)
+            run_save = self.save_folder + '/Run ' + run_name + '/'
+            Path(run_save).mkdir(parents=True, exist_ok=True) # folder created
 
-            for j, spill in enumerate(spill_set):
-                aspill_pd_temp = aspill_pd[aspill_pd.spill_nb == spill]
+            # retrieve only the channels for the given board
+            slicing = [channel for channel in self.channel_names if channel[0] == board]
+            amp = h2['amp_max'] # retrieve the amplitude in the .root file
+            amp_pd = pd.DataFrame(amp, columns=self.channel_names)[slicing]
 
-                # 'empty' arrays to store the statistics of each channel
+            # column header
+            col_list = len(self.numbers)*[board]; col_list = [x + y for x,y in zip(col_list, self.numbers)] 
+
+            if variation=='spill': # if we want to compute the statistics per spill
+                # retrieve the spill number in the .root file
+                if plot==True:
+                    h1 = uproot.concatenate({folder + f'/{spill_index}.root' : 'h4'}, allow_missing = True)
+                else:
+                    h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
+                spill = h1['spill'] 
+                spill_pd = pd.DataFrame(spill, columns=["spill_nb"])
+
+                # merge the two DataFrames
+                aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
+                
+                # create empty matrices to store the statistics
+                spill_set = set(aspill_pd["spill_nb"]) # to get a set of unique spill numbers
+                amp_mean_spill = np.zeros((len(spill_set), len(self.numbers)))
+                amp_mean_err_spill = np.zeros((len(spill_set), len(self.numbers)))
+                amp_sigma_spill = np.zeros((len(spill_set), len(self.numbers)))
+                amp_sigma_err_spill = np.zeros((len(spill_set), len(self.numbers)))
+
+                for j, spill in enumerate(spill_set):
+                    aspill_pd_temp = aspill_pd[aspill_pd.spill_nb == spill]
+
+                    # 'empty' arrays to store the statistics of each channel
+                    mu_arr = np.zeros(len(self.numbers))
+                    mu_error_arr = np.zeros(len(self.numbers))
+                    sigma_arr = np.zeros(len(self.numbers))
+                    sigma_error_arr = np.zeros(len(self.numbers))
+
+                    for i, channel in enumerate(slicing):         
+                        hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
+
+                        bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
+
+                        # fitting process: give a good guess to ECAL.__gaussian(*p)
+                        mean_guess = np.average(bin_centers, weights=hist)
+                        sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
+                        guess = [np.max(hist), mean_guess, sigma_guess]
+
+                        # fit the histogram with a gaussian, get the statistics
+                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                        mu = coeff[1]
+                        mu_error = np.sqrt(covar[1,1])
+                        sigma = coeff[2]
+                        sigma_error = np.sqrt(covar[2,2])
+
+                        #store the statistics
+                        mu_arr[i] = mu
+                        mu_error_arr[i] = mu_error
+                        sigma_arr[i] = sigma
+                        sigma_error_arr[i] = sigma_error
+
+                        if plot: # TODO: add path name to save the plots
+                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
+                            xlabel = 'Amplitude (ADC counts)'
+                            ylabel = 'Occurence (a.u.)'
+                            path = ''
+                            super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
+
+                    # gather all the statistics for each spill
+                    amp_mean_spill[j,:] = mu_arr
+                    amp_mean_err_spill[j,:] = mu_error_arr
+                    amp_sigma_spill[j,:] = sigma_arr
+                    amp_sigma_err_spill[j,:] = sigma_error_arr
+
+                if not plot:
+                    # convert the matrices to DataFrames
+                    spill_amp_mean_df = pd.DataFrame(amp_mean_spill, columns=col_list)
+                    spill_amp_mean_err_df = pd.DataFrame(amp_mean_err_spill, columns=col_list)
+                    spill_amp_sigma_df = pd.DataFrame(amp_sigma_spill, columns=col_list)
+                    spill_amp_sigma_err_df = pd.DataFrame(amp_sigma_err_spill, columns=col_list)
+
+                    # save these in .csv files: 4 files created per tuple (run, board)
+                    spill_amp_mean_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                             + f'/Spill mean amplitude run {single_run} board {board}.csv')
+                    spill_amp_mean_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                                 + f'/Spill error mean amplitude run {single_run} board {board}.csv')
+                    spill_amp_sigma_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                              + f'/Spill sigma amplitude run {single_run} board {board}.csv')
+                    spill_amp_sigma_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                                  + f'/Spill error sigma amplitude run {single_run} board {board}.csv')
+
+            else: # if variation=='run'
+                # empty arrays to store the statistics of each channel
                 mu_arr = np.zeros(len(self.numbers))
                 mu_error_arr = np.zeros(len(self.numbers))
                 sigma_arr = np.zeros(len(self.numbers))
                 sigma_error_arr = np.zeros(len(self.numbers))
 
-                for i, channel in enumerate(slicing):         
-                    hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
+                for i, channel in enumerate(slicing):
+                    hist, bin_edges = np.histogram(amp_pd[channel], bins = 1500)
+                    #hist, bin_edges, _ = plt.hist(amp_pd[channel], bins = 1500)
 
                     bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
-                    # fitting process: give a good guess to ECAL.__gaussian(*p)
-                    mean_guess = np.average(bin_centers, weights=hist)
+                    # fitting process: give a good guess
+                    mean_guess = np.average(bin_centers, weights=hist) # alternatively: mean_guess = bin_centers[np.argmax(hist)]
                     sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
                     guess = [np.max(hist), mean_guess, sigma_guess]
-                    
-                    # fit the histogram with a gaussian, get the statistics
+
+                    # fit the histogram with a gaussian
                     coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+
+                    # get the statistics from the fit, store them in the arrays
                     mu = coeff[1]
                     mu_error = np.sqrt(covar[1,1])
                     sigma = coeff[2]
                     sigma_error = np.sqrt(covar[2,2])
-                    
-                    #store the statistics
                     mu_arr[i] = mu
                     mu_error_arr[i] = mu_error
                     sigma_arr[i] = sigma
                     sigma_error_arr[i] = sigma_error
-                    
-                    if plot: # TODO: add path name to save the plots
-                        title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
+
+                    if plot:
+                        title = f'Run: {run_name}, Channel: {board+self.numbers[i]}'
                         xlabel = 'Amplitude (ADC counts)'
                         ylabel = 'Occurence (a.u.)'
-                        path = ''
+
+                        plot_save = self.plot_save_folder + f'/Run {single_run}'
+                        Path(plot_save).mkdir(parents=True, exist_ok=True) # folder created
+
+                        path = plot_save + f'/Run amplitude run {single_run} board {board}'
+                        # TODO: add path to figure to be saved
                         super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
-                
-                # gather all the statistics for each spill
-                amp_mean_spill[j,:] = mu_arr
-                amp_mean_err_spill[j,:] = mu_error_arr
-                amp_sigma_spill[j,:] = sigma_arr
-                amp_sigma_err_spill[j,:] = sigma_error_arr
-                
-            # convert the matrices to DataFrames
-            spill_amp_mean_df = pd.DataFrame(amp_mean_spill, columns=col_list)
-            spill_amp_mean_err_df = pd.DataFrame(amp_mean_err_spill, columns=col_list)
-            spill_amp_sigma_df = pd.DataFrame(amp_sigma_spill, columns=col_list)
-            spill_amp_sigma_err_df = pd.DataFrame(amp_sigma_err_spill, columns=col_list)
-        
-            # save these in .csv files: 4 files created per tuple (run, board)
-            spill_amp_mean_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                     + f'/Spill mean amplitude run {single_run} board {board}.csv')
-            spill_amp_mean_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                         + f'/Spill error mean amplitude run {single_run} board {board}.csv')
-            spill_amp_sigma_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                      + f'/Spill sigma amplitude run {single_run} board {board}.csv')
-            spill_amp_sigma_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                          + f'/Spill error sigma amplitude run {single_run} board {board}.csv')
-        
-        else: # if variation=='run'
-            # empty arrays to store the statistics of each channel
-            mu_arr = np.zeros(len(self.numbers))
-            mu_error_arr = np.zeros(len(self.numbers))
-            sigma_arr = np.zeros(len(self.numbers))
-            sigma_error_arr = np.zeros(len(self.numbers))
 
-            for i, channel in enumerate(slicing):
-                hist, bin_edges = np.histogram(amp_pd[channel], bins = 1500)
-                #hist, bin_edges, _ = plt.hist(amp_pd[channel], bins = 1500)
+                # convert the arrays into a single Dataframe
+                run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
 
-                bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
-
-                # fitting process: give a good guess
-                mean_guess = np.average(bin_centers, weights=hist) # alternatively: mean_guess = bin_centers[np.argmax(hist)]
-                sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
-                guess = [np.max(hist), mean_guess, sigma_guess]
-                
-                # fit the histogram with a gaussian
-                coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
-                
-                # get the statistics from the fit, store them in the arrays
-                mu = coeff[1]
-                mu_error = np.sqrt(covar[1,1])
-                sigma = coeff[2]
-                sigma_error = np.sqrt(covar[2,2])
-                mu_arr[i] = mu
-                mu_error_arr[i] = mu_error
-                sigma_arr[i] = sigma
-                sigma_error_arr[i] = sigma_error
-                
-                if plot:
-                    title = f'Run: {run_name}, Channel: {board+self.numbers[i]}'
-                    xlabel = 'Amplitude (ADC counts)'
-                    ylabel = 'Occurence (a.u.)'
-                    
-                    plot_save = self.plot_save_folder + f'/Run {single_run}'
-                    Path(plot_save).mkdir(parents=True, exist_ok=True) # folder created
-                    
-                    path = plot_save + f'/Run amplitude run {single_run} board {board}'
-                    
-                    super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
-
-            # convert the arrays into a single Dataframe
-            run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
-
-            # save it in a single .csv file per tuple (run, board)
-            run_amp_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                              + f'/Run amplitude run {single_run} board {board}.csv')
+                # save it in a single .csv file per tuple (run, board)
+                run_amp_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                  + f'/Run amplitude run {single_run} board {board}.csv')
+        except ValueError as e:
+            print(e)
     
     
     def __load_stats(self, single_run: int=None, board: str=None, variation: bool=None) -> Union[tuple, pd.DataFrame]:
@@ -344,6 +354,7 @@ class Amplitude(ECAL):
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, mean amplitude over spills'
         
+        # TODO: add path to figure to be saved
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
 
     
@@ -403,7 +414,6 @@ class Amplitude(ECAL):
         :param variation: either "run" or "spill". If variation is "run", then the histograms contain all the events in the run considered. If variation is "spill", the histogram contains the events in the spill_i of the run considered.
         :param spill_i: index of the spill to be considered in the case variation="spill"
         """
-        # TODO: exceptio if bad spill_i
         for single_run in self.included_runs:
             self.__hist_single_run(single_run, variation, spill_i)
     
@@ -447,6 +457,7 @@ class Amplitude(ECAL):
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, Board {board}, mean amplitude over runs'
         
+        # TODO: add path to figure to be saved
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
     
 
@@ -487,6 +498,7 @@ class Amplitude(ECAL):
 
         plot_title = f'Run {single_run}, mean amplitudes'
         
+        # TODO: add path to figure to be saved
         super()._ECAL__plot_colormesh(mean, plot_title)
         
         
@@ -494,7 +506,6 @@ class Amplitude(ECAL):
         """
         Plots the colormesh map with the mean amplitude over self.channel_names for every single_run in self.included_runs.
         """
-        # TODO: add path to figure to be saved
         for single_run in self.included_runs:
             self.__run_colormesh_single_run(single_run)
             
@@ -507,7 +518,7 @@ class Amplitude(ECAL):
         
         :param board: board considered
         """
-        # TODO: exception if only 1 run, check board is within the channels in self.letters
+        # TODO: add path to figure to be saved
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -571,5 +582,11 @@ class Amplitude(ECAL):
         """
         Plots for each channels in self.channel_names the relative amplitude resolution as a function of the amplitude.
         """
-        for board in self.letters:
-            self.__resolution_single_board(board)
+        try:
+            if len(self.included_runs)  <= 1:
+                raise ValueError('Need at least two runs to plot resolution')
+                
+            for board in self.letters:
+                self.__resolution_single_board(board)
+        except ValueError as e:
+            print(e)

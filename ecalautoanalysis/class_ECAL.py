@@ -41,7 +41,7 @@ def multiple_gaussians(x: float=None, *p: tuple) -> float:
     :param p: parameters of the gaussians; [amplitude1, mean1, std deviation1, amplitude2, mean2, ...]
     :return: sum of gaussians evaluated at the point x
     """
-    # TODO: exception if n_fit is not odd
+    
     n_fit = int(len(p)/3) # find the number of gaussians
     res = 0
     for i in range(n_fit):
@@ -106,25 +106,32 @@ class ECAL:
         # define the channels of the first run as channels_ref
         single_run = self.included_runs[0]
         folder =  self.raw_data_folder + str(int(single_run))
-        h = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
-        columns_ref = ak.to_pandas(h).columns
-        channels_ref = [channel for channel in columns_ref if channel[0] in ['A', 'B', 'C', 'D', 'E'] and channel[1] in self.numbers]
-        
-        # If inconsistency with self.channel_names, raise error
-        if set(channels_ref) != set(self.channel_names):
-            raise AssertionError("Letters do not match data")
-        
-        # Find the channels all the runs and check consistency with channels_ref
-        for single_run in self.included_runs:
-            
-            folder =  self.raw_data_folder + str(int(single_run))
+        try:
             h = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
+        except FileNotFoundError as e:
+            print(e)
+        else:
+            columns_ref = ak.to_pandas(h).columns
+            channels_ref = [channel for channel in columns_ref if channel[0] in ['A', 'B', 'C', 'D', 'E'] and channel[1] in self.numbers]
 
-            columns = ak.to_pandas(h).columns
-            
-            # If inconsistency, raise error
-            if set(columns) != set(columns_ref):
-                raise AssertionError("Included runs are not consistent")
+            # If inconsistency with self.channel_names, raise error
+            if set(channels_ref) != set(self.channel_names):
+                raise AssertionError("Letters do not match data")
+
+            # Find the channels all the runs and check consistency with channels_ref
+            for single_run in self.included_runs:
+
+                folder =  self.raw_data_folder + str(int(single_run))
+                try:
+                    h = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
+                except FileNotFoundError as e:
+                    print(e)
+                else:
+                    columns = ak.to_pandas(h).columns
+
+                    # If inconsistency, raise error
+                    if set(columns) != set(columns_ref):
+                        raise AssertionError("Included runs are not consistent")
                 
                 
     def __plot_hist(self, df: pd.DataFrame=None, channel: str=None, bin_centers: np.array=None, 
@@ -162,9 +169,7 @@ class ECAL:
 
         fig.update_layout(title=hist_title,
                          xaxis_title=xlabel,
-                         yaxis_title=ylabel,
-                         width=800,
-                         height=600)
+                         yaxis_title=ylabel)
 
         # TODO: uncomment with correct version of plotly
         #fig.write_image('test.png')
@@ -197,7 +202,8 @@ class ECAL:
         else:
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), 
                                           ticktext=[str(run) for run in self.included_runs]))
-                        
+        # TODO: add path to figure to be saved
+        # TODO: save figures
         fig.show()
         
         
@@ -216,6 +222,7 @@ class ECAL:
         fig = px.imshow(mean_df)
         fig.update_layout(title=plot_title)
         
+        # TODO: add path to figure to be saved
         # TODO: save figure
         fig.show()
         
