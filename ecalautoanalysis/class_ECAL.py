@@ -156,16 +156,16 @@ class ECAL:
         
         if len(coeff) == 3: # if we only have a gaussian
             d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
+
+            amp, mean, sigma = coeff
+            fig.add_vline(x=mean, line_dash='dash', line_color='red')
+            fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
         else: # if we have more than 3 parameters in coeff, then it means that we work with multiple gaussians
             d = {'x': bin_centers, 'y': multiple_gaussians(bin_centers, *coeff)}
             
         fit_pd = pd.DataFrame(data=d)
         trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=['red'])
         fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
-
-        # TODO: check
-        fig.add_vline(x=mean, line_dash='dash', line_color='red')
-        fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
 
         fig.update_layout(title=hist_title,
                          xaxis_title=xlabel,

@@ -269,7 +269,7 @@ class Amplitude(ECAL):
        
     def get_mean(self, single_run: int=None, board: str=None) -> pd.core.series.Series:
         """
-        Getter method for the mean of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the mean amplitude for each of the channels in the board.
+        Getter method for the mean of the amplitude Gaussian fit for the channels in the board in thelution('test code 280622') single_run. Returns a container with the mean amplitude for each of the channels in the board.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
@@ -359,7 +359,7 @@ class Amplitude(ECAL):
         plot_title = f'Run {single_run}, board {board}, mean amplitude over spills'
         
         file_title = f'Amplitude board {board}'
-        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/variation_spill/'
+        plot_save = self.plot_save_folder + '/Run ' + str(single_run) + '/variation_spill/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title, plot_save, file_title)
 
@@ -384,7 +384,7 @@ class Amplitude(ECAL):
             
     # ------------------------------------------------------------------------------------------------------------------------------
     # RUNS
-    
+
     # ---- HISTOGRAMS ----
     
     def __hist_single_board(self, single_run: int=None, board: str=None, variation: str=None, spill_i: int=None):
@@ -462,7 +462,7 @@ class Amplitude(ECAL):
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, Board {board}, mean amplitude over runs'
         
-        plot_save = self.plot_save_folder + '/run_variation/'
+        plot_save = self.plot_save_folder + '/run_variation/amplitude/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title)
     
@@ -504,9 +504,10 @@ class Amplitude(ECAL):
 
         plot_title = f'Run {single_run}, mean amplitudes'
         
+        file_title = 'Mean Amplitude'
         plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
-        super()._ECAL__plot_colormesh(mean, plot_title, plot_save)
+        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title)
         
         
     def run_colormesh(self):
