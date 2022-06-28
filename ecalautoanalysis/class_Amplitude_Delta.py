@@ -70,7 +70,8 @@ class Amplitude_Delta(ECAL):
         return amp_delta_pd
     
     
-    def __generate_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str='run', plot: bool=False, spill_index: int=None):
+    def __generate_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, 
+                         variation: str='run', plot: bool=False, spill_index: int=None):
         """ 
         Generates the statistics for a given board in a run, either when analyzing spills or runs. Can also plot the histogram of the data.
         Statistics of the amplitude delta Gaussian fit (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
@@ -81,9 +82,14 @@ class Amplitude_Delta(ECAL):
         :param variation: ('run' or 'spill') computing the statistics per run or spill
         :param plot: boolean. If True, the histogram of the data is plotted.
         """
+        # TODO: add path to figure to be saved
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
+                
+            elif board not in self.letters:
+                raise ValueError("Board must be included in the list of letters")
+                
             else:
                 # Computation with merged data
                 folder =  self.raw_data_folder + str(int(single_run))
@@ -115,6 +121,9 @@ class Amplitude_Delta(ECAL):
                     spill = h1['spill'] 
                     spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
 
+                    if spill_index not in spill_pd["spill_nb"]: # raises an exception if the index references an non-existing spill
+                        raise ValueError("There is no spill in the data for the given spill_index")
+                    
                     # merge the two Dataframes
                     aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
 
@@ -328,6 +337,7 @@ class Amplitude_Delta(ECAL):
         :param board: board to be analyzed with the run, eg. 'C'
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
+        # TODO: add path to figure to be saved
         # load the Dataframes
         mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, ref_channel, 'spill')
         num_spills = mean.shape[0] # number of spills in the single run
@@ -452,6 +462,7 @@ class Amplitude_Delta(ECAL):
         :param board: board to be analyzed with the run, eg. 'C'
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
+        # TODO: add path to figure to be saved
         # load the Dataframes     
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -515,6 +526,7 @@ class Amplitude_Delta(ECAL):
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
+        # TODO: add path to figure to be saved
         stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
         folder =  self.raw_data_folder + str(int(single_run))
         run_name = os.path.basename(os.path.normpath(folder))
