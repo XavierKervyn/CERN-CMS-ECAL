@@ -2,15 +2,31 @@
 
 from .class_ECAL import *
 
-""" 1st Child Class definition """
+"""
+General function definitions
+"""
 
-def sigma_amp_fit(A, *p):
+def sigma_amp_fit(A: float=None, *p: tuple) -> float:
+    """
+    Fit function for the relative amplitude resolution
+    
+    :param A: amplitude
+    :param p: parameters N (noise), s (stochastic), and c (offset)
+    
+    :return: Value of the function at A with parameters N, s, and c
+    """
     N, s, c = p
     return np.sqrt( (N/A)**2 + (s**2/A) + c**2 )
 
+"""
+Child class definition
+"""
+
 class Amplitude(ECAL):
     """
-    This class is for the analysis of the amplitudes (not the resolution, cf. class Amplitude_Delta for this purpose).
+    This class is for the analysis of the amplitudes. 
+    
+    With a given list of self.included_runs, one can plot amplitude histograms, variation of the amplitude over runs, colormeshes over the channels, as well as the relative amplitude resolution using the public methods.
     
     :param included_runs: list of all the numbers (int) corresponding to the runs to be analyzed, eg. [15610, 15611]
     :param letters: list of all the boards (str) connected for the included_runs, eg. ['A', 'B', 'D']
@@ -29,7 +45,7 @@ class Amplitude(ECAL):
     def __generate_stats(self, single_run: int=None, board: str=None, variation: str='run', plot: bool=False, spill_index: int=None):
         """
         Generates the statistics for a given board in a run, either when analyzing spills or runs. Can also plot the histogram of the data.
-        Statistics of the amplitude (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
+        Statistics of the amplitude Gaussian fit (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
@@ -237,22 +253,54 @@ class Amplitude(ECAL):
         except: 
             raise Exception('Could not load nor generate .csv file')
        
-    def get_mean(self, single_run: int=None, board: str=None):
+    def get_mean(self, single_run: int=None, board: str=None) -> pd.core.series.Series:
+        """
+        Getter method for the mean of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the mean amplitude for each of the channels in the board.
+        
+        :param single_run: number associated with the run to be analyzed, eg. 15610
+        :param board: board to be analyzed with the run, eg. 'C'
+        
+        :return: pandas.core.series.Series containing the mean of the amplitude for each of the channels in the board
+        """
         df = self.__load_stats(single_run, board, variation='run')
         return df["mu"]
     
     
-    def get_sigma(self, single_run: int=None, board: str=None):
+    def get_sigma(self, single_run: int=None, board: str=None) -> pd.core.series.Series:
+        """
+        Getter method for the standard deviation of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the standard deviation amplitude for each of the channels in the board.
+        
+        :param single_run: number associated with the run to be analyzed, eg. 15610
+        :param board: board to be analyzed with the run, eg. 'C'
+        
+        :return: pandas.core.series.Series containing the standard deviation of the amplitude for each of the channels in the board
+        """
         df = self.__load_stats(single_run, board, variation='run')
         return df["sigma"]
     
     
-    def get_mean_err(self, single_run: int=None, board: str=None):
+    def get_mean_err(self, single_run: int=None, board: str=None) -> pd.core.series.Series:
+        """
+        Getter method for the error on the mean of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the error on the mean amplitude for each of the channels in the board.
+        
+        :param single_run: number associated with the run to be analyzed, eg. 15610
+        :param board: board to be analyzed with the run, eg. 'C'
+        
+        :return: pandas.core.series.Series containing the error on the mean of the amplitude for each of the channels in the board
+        """
         df = self.__load_stats(single_run, board, variation='run')
         return df["mu error"]
     
     
-    def get_sigma_err(self, single_run: int=None, board: str=None):
+    def get_sigma_err(self, single_run: int=None, board: str=None) -> pd.core.series.Series:
+        """
+        Getter method for the error on the standard deviation of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the error on the standard deviation amplitude for each of the channels in the board.
+        
+        :param single_run: number associated with the run to be analyzed, eg. 15610
+        :param board: board to be analyzed with the run, eg. 'C'
+        
+        :return: pandas.core.series.Series containing the error on the standard deviation of the amplitude for each of the channels in the board
+        """
         df = self.__load_stats(single_run, board, variation='run')
         return df["sigma error"]
         
@@ -262,12 +310,11 @@ class Amplitude(ECAL):
     
     def __spill_single_board(self, single_run: int=None, board: str=None): 
         """
-        Plots the amplitude per spill for a single board of a given single_run
+        Plots the mean amplitude as a function of spill number for a single board of a given single_run.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
         """
-        # TODO: update docstring
         
         # load the DataFrames with the statistics computed per spill
         mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, 'spill')
@@ -326,19 +373,24 @@ class Amplitude(ECAL):
     
     def __hist_single_board(self, single_run: int=None, board: str=None, variation: str=None, spill_i: int=None):
         """
-        Generates the statistics for all the channels on a given board. Plots the corresponding histograms.
+        Generates the statistics for all the channels on a given board and plots the corresponding histograms.
+        If variation is "run", then the histograms contain all the events in the single_run. If variation is "spill", the histogram contains the events in the spill_i of the single_run.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
+        :param variation: either "run" or "spill". If variation is "run", then the histograms contain all the events in the single_run. If variation is "spill", the histogram contains the events in the spill_i of the single_run.
+        :param spill_i: index of the spill to be considered in the case variation="spill"
         """
         self.__generate_stats(single_run, board, variation, plot=True, spill_index=spill_i)
         
 
     def __hist_single_run(self, single_run: int=None, variation: str=None, spill_i: int=None):
         """
-        Generates the statistics for all the channels in a given run (loops on all its boards). Plots the corresponding histograms.
+        Generates the statistics for all the channels in a given run (loops on all its boards) and plots the corresponding histograms.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
+        :param variation: either "run" or "spill". If variation is "run", then the histograms contain all the events in the single_run. If variation is "spill", the histogram contains the events in the spill_i of the single_run.
+        :param spill_i: index of the spill to be considered in the case variation="spill"
         """
         for board in self.letters:
             self.__hist_single_board(single_run, board, variation, spill_i)
@@ -346,8 +398,12 @@ class Amplitude(ECAL):
 
     def hist(self, variation: str='run', spill_i: int=None):
         """
-        Computes the statistics and plots the corresponding histogram for every single_run in self.included_runs
+        Computes the statistics and plots the corresponding histograms for every single_run in self.included_runs and channels in self.channel_names.
+        
+        :param variation: either "run" or "spill". If variation is "run", then the histograms contain all the events in the run considered. If variation is "spill", the histogram contains the events in the spill_i of the run considered.
+        :param spill_i: index of the spill to be considered in the case variation="spill"
         """
+        # TODO: exceptio if bad spill_i
         for single_run in self.included_runs:
             self.__hist_single_run(single_run, variation, spill_i)
     
@@ -414,7 +470,6 @@ class Amplitude(ECAL):
     def __run_colormesh_single_run(self, single_run: int=None):
         """ 
         Plots the colormesh map with the mean amplitude (mu) over self.channel_names for a given single_run.
-        Could also do the same with mu error, sigma, sigma error.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         """
@@ -425,7 +480,6 @@ class Amplitude(ECAL):
         run_save = self.save_folder + '/Run ' + str(run_name) + '/'
         Path(run_save).mkdir(parents=True, exist_ok=True)
 
-        # TODO: do we also want to plot sigma, mu_err, sigma_err? if yes, then change docstring 
         mean = np.zeros((len(self.numbers), len(self.letters)))
         for i, board in enumerate(self.letters):
             run_amp_df = self.__load_stats(single_run, board, 'run')
@@ -440,14 +494,19 @@ class Amplitude(ECAL):
         """
         Plots the colormesh map with the mean amplitude over self.channel_names for every single_run in self.included_runs.
         """
+        # TODO: add path to figure to be saved
         for single_run in self.included_runs:
             self.__run_colormesh_single_run(single_run)
             
             
 # ----------------------------------------------------------------------------------
 
-    def __resolution_single_board(self, board):
-        # TODO: docstring
+    def __resolution_single_board(self, board: str=None):
+        """
+        Plots for each channel in the board given the relative amplitude resolution as a function of the amplitude.
+        
+        :param board: board considered
+        """
         # TODO: exception if only 1 run, check board is within the channels in self.letters
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -503,10 +562,14 @@ class Amplitude(ECAL):
                                             ]
                              );
             
+            # TODO: save figures
+            
             fig.show()
 
 
     def resolution(self):
-        #TODO: docstring
+        """
+        Plots for each channels in self.channel_names the relative amplitude resolution as a function of the amplitude.
+        """
         for board in self.letters:
             self.__resolution_single_board(board)
