@@ -75,8 +75,7 @@ class Time_Delta(ECAL):
 
         :return: DataFrame of the time deltas, the columns being the channels and the rows the events
         """
-        # Rename the column names with the channels in self._channel_names
-        time_pd = time
+        time_pd = time  # Rename the column names with the channels in self._channel_names
         n_numbers = len(self.numbers)
 
         time_delta_pd = pd.DataFrame()
@@ -120,11 +119,14 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-        # TODO: create exception for spill_index
+        # TODO: add path to figure to be saved
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
-
+                
+            elif board not in self.letters:
+                raise ValueError("Board must be included in the list of letters")
+            
             else:
                 # Computation with merged data: retrieve the amplitude
                 folder = self.raw_data_folder + str(int(single_run))
@@ -156,6 +158,9 @@ class Time_Delta(ECAL):
                         h1 = uproot.concatenate({folder + '/*.root': 'h4'}, allow_missing=True)
                     spill = h1['spill']
                     spill_pd = pd.DataFrame(spill, columns=["spill_nb"])
+                    
+                    if spill_index not in spill_pd["spill_nb"]: # raises an exception if the index references an non-existing spill
+                        raise ValueError("There is no spill in the data for the given spill_index")
 
                     # merge the two Dataframes
                     tspill_pd = pd.concat([time_pd, spill_pd], axis=1, join='inner')
@@ -201,6 +206,9 @@ class Time_Delta(ECAL):
                                 sigma = coeff[2]
                                 sigma_error = np.sqrt(covar[2, 2])
                             else:
+                                if (nb_fits %2 != 1):
+                                    raise ValueError("The number of fits must be odd")
+                                   
                                 # fitting process with multiple gaussians
                                 guess = []
                                 amp_list = []
@@ -300,6 +308,9 @@ class Time_Delta(ECAL):
                             sigma = coeff[2]
                             sigma_error = np.sqrt(covar[2, 2])
                         else:
+                            if (nb_fits %2 != 1):
+                                raise ValueError("The number of fits must be odd")
+                            
                             # fitting process with multiple gaussians
                             guess = []
                             amp_list = []
@@ -482,6 +493,7 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
+        # TODO: add path to figure to be saved
         # load the Dataframes
         mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, ref_channel, 'spill', fit_option, nb_fits)
         num_spills = mean.shape[0]  # number of spills in the single run
@@ -622,6 +634,7 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
+        # TODO: add path to figure to be saved
         # load the Dataframes
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -691,6 +704,7 @@ class Time_Delta(ECAL):
         :param single_run: The number of a run, for example '15484'
         :param ref_channel: reference channel with respect to which the differences are computed
         """
+        # TODO: add path to figure to be saved
         # stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
         folder = self.raw_data_folder + str(int(single_run))
         run_name = os.path.basename(os.path.normpath(folder))
@@ -732,7 +746,7 @@ class Time_Delta(ECAL):
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
         """
-        # TODO: exception if bad ref_channel or board
+        # TODO: add path to figure to be saved
         a = Amplitude(self.included_runs, self.letters) # create new array if ref_channel not in board
         
         # mean amplitude, sigma and associated errors for the chosen board
@@ -826,6 +840,12 @@ class Time_Delta(ECAL):
         
         :param ref_channel: reference channel with respect to which the differences are computed
         """
-        for board in self.letters:
-            self.__resolution_single_board(board, ref_channel)
+        try:
+            if len(self.included_runs) <= 1:
+                raise ValueError("Need at least two runs to plot a resolution")    
+            for board in self.letters:
+                self.__resolution_single_board(board, ref_channel)
+        except ValueError as e:
+            print(e)
+            
             
