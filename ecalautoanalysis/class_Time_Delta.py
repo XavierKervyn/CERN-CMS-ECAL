@@ -5,7 +5,7 @@ from .class_Amplitude import * # this import is needed for the resolution
 
 """ General function"""
 
-def sigma_t_fit(A: float=None, *p: tuple=None) -> float:
+def sigma_t_fit(A: float=None, *p: tuple) -> float:
     """
     Time resolution as a function of the mean amplitude A, with parameters *p to be fitted.
     

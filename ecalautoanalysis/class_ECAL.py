@@ -3,7 +3,6 @@
 import uproot
 import numpy as np
 import pandas as pd
-#import glob
 import os
 import awkward as ak
 import plotly.express as px
@@ -19,7 +18,7 @@ from typing import *
 
 save_folder_global = 'Statistics' # Processed data from will be stored in a folder named like this. 
 raw_data_folder_global = '/eos/home-s/spigazzi/Lab21/data/Reco/' # Raw data is stored here
-plot_save_folder_global = 'Plots' # Produced plots are saved here
+plot_save_folder_global = 'Plots' # Produced plots will be saved here
 
 
 def gaussian(x: float=None, *p: tuple) -> float:
@@ -28,18 +27,26 @@ def gaussian(x: float=None, *p: tuple) -> float:
     
     :param x: point at which the function is evaluated
     :param p: parameters of the gaussian; amplitude, mean, std deviation
+    :return: gaussian evaluated at the point x
     """
     A, mu, sigma = p
     return A * np.exp(-(x -mu)**2/(2*sigma**2))
 
 
-def multiple_gaussians(x, *p):
-    # TODO: docstring
-    n_fit = int(len(p)/3)
+def multiple_gaussians(x: float=None, *p: tuple) -> float:
+    """
+    Returns a sum of gaussians with parameters given by *p, evaluated at the point x
+    
+    :param x: point at which the function is evaluated
+    :param p: parameters of the gaussians; [amplitude1, mean1, std deviation1, amplitude2, mean2, ...]
+    :return: sum of gaussians evaluated at the point x
+    """
+    # TODO: exception if n_fit is not odd
+    n_fit = int(len(p)/3) # find the number of gaussians
     res = 0
     for i in range(n_fit):
-        coeff = [p[i*3], p[i*3+1], p[i*3+2]]
-        res += gaussian(x, *coeff)
+        coeff = [p[i*3], p[i*3+1], p[i*3+2]] # pick the coefficients
+        res += gaussian(x, *coeff) # add each gaussian
     return res
 
 
@@ -47,7 +54,9 @@ def multiple_gaussians(x, *p):
 
 class ECAL:
     """
-    Parent class of Amplitude, Time and Amplitude_Delta
+    This class is the parent class of Amplitude, Time_Delta and Amplitude_Delta. It contains the attributes and methods 
+    that are to be inherited to the entire code structure. This class should be understood as 'virtual', in the sense that
+    it is not possible to have an instance of ECAL.
     
     :param included_runs: run numbers to be analysed, eg. [15610, 15611]
     :param letters: corresponding to the boards connected, eg. ['A', 'B', 'D']
@@ -55,7 +64,6 @@ class ECAL:
     :param raw_data_folder: folder where the raw experiment data is located
     :param plot_save_folder: folder where the plots are saved
     """
-    
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None, 
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global, 
                  plot_save_folder: str=plot_save_folder_global):
@@ -82,13 +90,15 @@ class ECAL:
         except TypeError as e:
             print(e)
    
-            
+
+    # ------------------------------------------------------------------------------------------------------------------------------
+    # GENERAL
+    
     def __check_consistency(self):
         """
-        Checks if the boards included in all the included_runs are the same, and checks if these boards are consistent with self.channel_names
-        Also checks if included_runs is a list
+        Checks if the boards included in all the included_runs are the same, and checks if these boards are consistent with
+        self.channel_names. Also checks if included_runs is indeed a list
         """
-        
         # Check if included_runs is a list
         if type(self.included_runs) != list:
             raise TypeError("included_runs must be a list")
@@ -116,22 +126,37 @@ class ECAL:
             if set(columns) != set(columns_ref):
                 raise AssertionError("Included runs are not consistent")
                 
-    # TODO: move inside class
-    def __plot_hist(self, df, channel, bin_centers, hist_title, xlabel, ylabel, path, *coeff):
-        # TODO: docstring
-        trace1 = px.histogram(df, x=channel, nbins=3000) # TODO: label?
-        fig = make_subplots(specs=[[{"secondary_y": False}]])
-        fig.add_trace(trace1.data[0])
+                
+    def __plot_hist(self, df: pd.DataFrame=None, channel: str=None, bin_centers: np.array=None, 
+                    hist_title: str=None, xlabel: str=None, ylabel: str=None, path: str=None, *coeff: tuple):
+        """
+        Plots the histohram of the DataFrame df for a single channel and with the bin_centers given. Title and labels are 
+        also included in the arguments, as well as the path to save the figure and a tuple with the coefficients for the 
+        (multiple) gaussian(s) fit of the data.
         
-        if len(coeff) == 3:
+        :param df: DataFrame containing the data to be plotted
+        :param channel: the channel we want to study
+        :param bin_centers: placement of the bars of the histogram
+        :param hist_title: title of the figure
+        :param xlabel: label of the x-axis
+        :param ylabel: label of the y-axis
+        :param path: path to save the figure
+        :param *coeff: pointer to the coefficients computed with the (multiple) gaussian(s) fit
+        """
+        trace1 = px.histogram(df, x=channel, nbins=3000)
+        fig = make_subplots(specs=[[{"secondary_y": False}]])
+        fig.add_trace(trace1.data[0]) # plot the DataFrame
+        
+        if len(coeff) == 3: # if we only have a gaussian
             d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
-        else:
+        else: # if we have more than 3 parameters in coeff, then it means that we work with multiple gaussians
             d = {'x': bin_centers, 'y': multiple_gaussians(bin_centers, *coeff)}
             
         fit_pd = pd.DataFrame(data=d)
-        trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=['red']) # TODO: name/label?
-        fig.add_trace(trace2.data[0], secondary_y=False)
+        trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=['red'])
+        fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
 
+        # TODO: uncomment when correct version of plotly
         #fig.add_vline(x=mean, line_dash='dash', line_color='red')
         #fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
 
@@ -141,43 +166,56 @@ class ECAL:
                          width=800,
                          height=600)
 
-        # TODO: check later how to install orca
+        # TODO: uncomment with correct version of plotly
         #fig.write_image('test.png')
         #fig.write_image('test.pdf')
         #fig.write_html('test.html')
         fig.show()
 
-    def __plot_variation(self, df, variation, xlabel, ylabel, plot_title):
-        # TODO: docstring
+        
+    def __plot_variation(self, df: pd.DataFame=None, variation: str=None,
+                         xlabel: str=None, ylabel: str=None, plot_title: str=None):
+        """
+        Plots the variation either over runs or spills of the DataFrame. Title and labels of the axes are included 
+        as arguments.
+        
+        :param df: DataFrame containing the data to be plotted
+        :param variation: either 'run' (histograms are computed over a full run) or 'spill' (separately for each spill in single_run).
+        :param xlabel: label of the x-axis
+        :param ylabel: label of the y-axis
+        :param plot_title: title of the figure
+        """
         fig = make_subplots(specs=[[{"secondary_y": False}]])
         fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
         
-        # TODO: resize plot?
         fig.update_layout(title=plot_title,
                          xaxis_title=xlabel,
                          yaxis_title=ylabel)
 
-        
         if variation == 'spill':
             fig.update_layout(xaxis= dict(tickmode='linear', tick0=1, dtick=1))
         else:
-            # TODO: check
-            fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=[str(run) for run in self.included_runs]))
+            fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), 
+                                          ticktext=[str(run) for run in self.included_runs]))
                         
         fig.show()
         
-    def __plot_colormesh(self, mean, plot_title):
-        #TODO: docstring
+        
+    def __plot_colormesh(self, mean: np.array=None, plot_title: str=None):
+        """
+        Plots a 2D colormesh map of the mean of a given quantity (amplitude, amplitude difference, time difference) over all channels
+        and boards.
+        
+        :param mean: array containing all the data
+        :param plot_title: title of the figure
+        """
         mean_df = pd.DataFrame(mean)
         mean_df.columns = self.letters
         mean_df.index = reversed(self.numbers)
         
         fig = px.imshow(mean_df)
-        """
-        fig = px.imshow(mean_df, 
-                        labels=dict(x="Board", y="Channel", color="Mean amplitude"),
-                        x=self.letters,
-                        y=list(reversed(self.numbers)))
-        """
         fig.update_layout(title=plot_title)
+        
+        # TODO: save figure
         fig.show()
+        
