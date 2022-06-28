@@ -133,12 +133,15 @@ class Amplitude(ECAL):
                         sigma_arr[i] = sigma
                         sigma_error_arr[i] = sigma_error
 
-                        if plot: # TODO: add path name to save the plots
-                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
+                        if plot:
+                            title = f'Run: {run_name}, channel: {board+self.numbers[i]}, spill {spill}'
                             xlabel = 'Amplitude (ADC counts)'
                             ylabel = 'Occurence (a.u.)'
-                            path = ''
-                            super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
+                            
+                            file_title = f'Amplitude channel {board+self.numbers[i]} spill {spill}'
+                            plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
+                            Path(plot_save).mkdir(parents=True, exist_ok=True)
+                            super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
 
                     # gather all the statistics for each spill
                     amp_mean_spill[j,:] = mu_arr
@@ -202,9 +205,10 @@ class Amplitude(ECAL):
                         plot_save = self.plot_save_folder + f'/Run {single_run}'
                         Path(plot_save).mkdir(parents=True, exist_ok=True) # folder created
 
-                        path = plot_save + f'/Run amplitude run {single_run} board {board}'
-                        # TODO: add path to figure to be saved
-                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
+                        file_title = f'Amplitude channel {board+self.numbers[i]}'
+                        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
+                        Path(plot_save).mkdir(parents=True, exist_ok=True)
+                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
 
                 # convert the arrays into a single Dataframe
                 run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
@@ -354,10 +358,11 @@ class Amplitude(ECAL):
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, mean amplitude over spills'
         
-        # TODO: add path to figure to be saved
-        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
+        file_title = f'Amplitude board {board}'
+        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/variation_spill/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title, plot_save, file_title)
 
-    
     
     def __spill_single_run(self, single_run: int=None):
         """
@@ -420,7 +425,7 @@ class Amplitude(ECAL):
     
     # ---- VARIATION OVER RUNS ----
     
-    def __run_single_board(self, board: str=None):
+    def __run_single_board(self, board: str=None, file_title: str=None):
         """
         Plots the mean amplitude over each single_run of self.included_runs for every channel in a given board
         
@@ -457,11 +462,12 @@ class Amplitude(ECAL):
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, Board {board}, mean amplitude over runs'
         
-        # TODO: add path to figure to be saved
-        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
+        plot_save = self.plot_save_folder + '/run_variation/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title)
     
 
-    def run_variation(self):
+    def run_variation(self, file_title: str=None):
         """
         Plots the evolution of the mean amplitude over every single_run in self.included_runs.
         Warning: included_runs must be at least of length two.
@@ -471,7 +477,7 @@ class Amplitude(ECAL):
                 raise ValueError('Need at least two runs to plot a variation')
             else:    
                 for board in self.letters:
-                    self.__run_single_board(board)
+                    self.__run_single_board(board, file_title)
         except ValueError as e:
             print(e)
     
@@ -513,7 +519,7 @@ class Amplitude(ECAL):
             
 # ----------------------------------------------------------------------------------
 
-    def __resolution_single_board(self, board: str=None):
+    def __resolution_single_board(self, board: str=None, file_title: str=None):
         """
         Plots for each channel in the board given the relative amplitude resolution as a function of the amplitude.
         
@@ -574,12 +580,17 @@ class Amplitude(ECAL):
                                             ]
                              );
             
-            # TODO: save figures
+            plot_save = self.plot_save_folder + '/resolution/amplitude/'
+            Path(plot_save).mkdir(parents=True, exist_ok=True)
             
-            fig.show()
+            path = plot_save
+            fig.write_image(path + file_title + '.png')
+            fig.write_image(path + file_title + '.pdf')
+            fig.write_image(path + file_title + '.svg')
+            fig.write_html(path + file_title + '.html')
 
 
-    def resolution(self):
+    def resolution(self, file_title: str=None):
         """
         Plots for each channels in self.channel_names the relative amplitude resolution as a function of the amplitude.
         """
@@ -588,6 +599,6 @@ class Amplitude(ECAL):
                 raise ValueError('Need at least two runs to plot resolution')
                 
             for board in self.letters:
-                self.__resolution_single_board(board)
+                self.__resolution_single_board(board, file_title)
         except ValueError as e:
             print(e)
