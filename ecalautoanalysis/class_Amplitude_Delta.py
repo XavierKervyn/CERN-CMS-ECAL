@@ -170,11 +170,15 @@ class Amplitude_Delta(ECAL):
                             sigma_error_arr[i] = sigma_error
 
                             if plot:
-                                title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}, Spill {spill}'
+                                title = f'Run: {run_name}, channel: {board+self.numbers[i]}, ref {ref_channel}, spill {spill}'
                                 xlabel = 'Amplitude delta (ADC counts)'
                                 ylabel = 'Occurence (a.u.)'
-                                path = ''
-                                super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
+                                
+                                file_title = f'Amplitude Delta channel {board+self.numbers[i]} ref {ref_channel} spill {spill}'
+                                
+                                plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
+                                Path(plot_save).mkdir(parents=True, exist_ok=True)
+                                super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
 
                         amp_mean_spill[j,:] = mu_arr
                         amp_mean_err_spill[j,:] = mu_error_arr
@@ -237,8 +241,12 @@ class Amplitude_Delta(ECAL):
                             title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}'
                             xlabel = 'Amplitude delta (ADC counts)'
                             ylabel = 'Occurence (a.u.)'
-                            path = ''
-                            super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
+                            
+                            file_title = f'Amplitude Delta channel {board+self.numbers[i]} ref {ref_channel}'
+                                
+                            plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
+                            Path(plot_save).mkdir(parents=True, exist_ok=True)
+                            super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
 
                     # convert the arrays into a single Dataframe
                     run_amp_delta_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr,
@@ -366,7 +374,10 @@ class Amplitude_Delta(ECAL):
         ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean amplitude delta over spills'
         
-        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
+        file_title = f'Amplitude Delta board {board} ref {ref_channel}'
+        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/variation_spill/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title, plot_save, file_title)
 
         
     def __spill_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None):
@@ -456,14 +467,14 @@ class Amplitude_Delta(ECAL):
             
     # --- VARIATION OVER RUNS ---
     
-    def __run_single_board(self, board: str=None, ref_channel: str=None):
+    def __run_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None):
         """
         Plots evolution of the mean amplitude over self.included_runs for given board and reference channel
         
         :param board: board to be analyzed with the run, eg. 'C'
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
-        # TODO: add path to figure to be saved
+        # TODO: update docstring with file_title
         # load the Dataframes     
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -493,10 +504,12 @@ class Amplitude_Delta(ECAL):
         ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean amplitude over runs'
         
-        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
+        plot_save = self.plot_save_folder + '/run_variation/ '
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title)
     
 
-    def run_variation(self, ref_channel: str=None, all_channels: bool=None):
+    def run_variation(self, ref_channel: str=None, all_channels: bool=None, file_title: str=None):
         """
         Plots evolution of the mean amplitude over self.included_runs for a given reference channel
         Does it either for all channels self.channel_names or only for those in the board to which ref_channel belongs
@@ -510,24 +523,23 @@ class Amplitude_Delta(ECAL):
             else:
                 if all_channels:
                     for board in self.letters:
-                        self.__run_single_board(board, ref_channel)
+                        self.__run_single_board(board, ref_channel, file_title)
                 else:
                     board = ref_channel[0]
-                    self.__run_single_board(board, ref_channel)
+                    self.__run_single_board(board, ref_channel, file_title)
         except ValueError as e:
             print(e)
             
     
     # --- STATISTICS OVER RUNS ---
     
-    def __run_colormesh_single_run(self, single_run: int=None, ref_channel: str=None):
+    def __run_colormesh_single_run(self, single_run: int=None, ref_channel: str=None, file_title: str=None):
         """ 
         Plots the colormesh map with the mean amplitude (mu) over self.channel_names for a given single_run.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
-        # TODO: add path to figure to be saved
         stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
         folder =  self.raw_data_folder + str(int(single_run))
         run_name = os.path.basename(os.path.normpath(folder))
@@ -541,11 +553,14 @@ class Amplitude_Delta(ECAL):
             mean[:,i] = run_amplitude_delta_df["mu"]
         
         plot_title = f'Run {single_run}, ref {ref_channel}, mean amplitude delta'
+        file_title = f'Mean amplitude delta ref {ref_channel}'
         
-        super()._ECAL__plot_colormesh(mean, plot_title)
+        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title)
 
         
-    def run_colormesh(self, ref_channel: str=None):
+    def run_colormesh(self, ref_channel: str=None, file_title: str=None):
         """
         Plots the colormesh map with the mean amplitude over self.channel_names for every single_run in self.included_runs.
         
@@ -553,4 +568,4 @@ class Amplitude_Delta(ECAL):
         """
         # TODO: add path to figure to be saved
         for single_run in self.included_runs:
-            self.__run_colormesh_single_run(single_run, ref_channel)
+            self.__run_colormesh_single_run(single_run, ref_channel, file_title)
