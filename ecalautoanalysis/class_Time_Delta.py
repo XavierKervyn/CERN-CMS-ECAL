@@ -531,7 +531,7 @@ class Time_Delta(ECAL):
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean time delta over spills'
         
         file_title = f'Time Delta board {board} ref {ref_channel}'
-        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/variation_spill/'
+        plot_save = self.plot_save_folder + '/Run ' + str(single_run) + '/variation_spill/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
         
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title, plot_save, file_title)
@@ -678,7 +678,7 @@ class Time_Delta(ECAL):
         ylabel = 'Time delta (ps)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean time delta over runs'
         
-        plot_save = self.plot_save_folder + '/run_variation/'
+        plot_save = self.plot_save_folder + '/run_variation/time_delta/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title)
 
