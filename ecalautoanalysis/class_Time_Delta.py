@@ -249,13 +249,16 @@ class Time_Delta(ECAL):
                             sigma_arr[i] = sigma
                             sigma_error_arr[i] = sigma_error
 
-                            if plot:  # TODO: add path name to save the plots
+                            if plot:
                                 title = f'Run: {run_name}, channel: {board + self.numbers[i]}, ref {ref_channel}, spill {spill}'
                                 xlabel = 'Time delta (ps)'
                                 ylabel = 'Occurrence (a.u.)'
-                                path = ''
+                                
+                                file_title = f'Time Delta channel {board + self.numbers[i]} ref {ref_channel} spill {spill}'
+                                plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
+                                Path(plot_save).mkdir(parents=True, exist_ok=True)
                                 super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel,
-                                                         path, *coeff)
+                                                         plot_save, file_title, *coeff)
                                 
                         time_mean_spill[j, :] = mu_arr
                         time_mean_err_spill[j, :] = mu_error_arr
@@ -355,10 +358,13 @@ class Time_Delta(ECAL):
                             title = f'Run: {run_name}, channel: {board + self.numbers[i]}, ref {ref_channel}'
                             xlabel = 'Time delta (ps)'
                             ylabel = 'Occurrence (a.u.)'
-                            path = ''
+                        
+                            file_title = f'Time Delta channel {board + self.numbers[i]} ref {ref_channel}'
+                            plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
+                            Path(plot_save).mkdir(parents=True, exist_ok=True)
                            
                             super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel,
-                                                     path, *coeff)
+                                                     plot_save, file_title, *coeff)
 
                     # convert the arrays into a single Dataframe
                     run_time_delta_df = pd.DataFrame(
@@ -495,7 +501,7 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-        # TODO: add path to figure to be saved
+
         # load the Dataframes
         mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, ref_channel, 'spill', fit_option, nb_fits)
         num_spills = mean.shape[0]  # number of spills in the single run
@@ -523,8 +529,12 @@ class Time_Delta(ECAL):
         xlabel = 'Spill'
         ylabel = 'Time delta (ps)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean time delta over spills'
-
-        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
+        
+        file_title = f'Time Delta board {board} ref {ref_channel}'
+        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/variation_spill/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        
+        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title, plot_save, file_title)
 
         
     def __spill_single_run(self, single_run: int = None, ref_channel: str = None, all_channels: bool = None, 
@@ -626,7 +636,7 @@ class Time_Delta(ECAL):
             
     # ---- VARIATION OVER RUNS ----
 
-    def __run_single_board(self, board: str = None, ref_channel: str = None, fit_option: str=None, nb_fits: int=None):
+    def __run_single_board(self, board: str = None, ref_channel: str = None, fit_option: str=None, nb_fits: int=None, file_title: str=None):
         """
         Plots the evolution over the runs of the time delta of the channels on the board with respect to the ref_channel.
         fit_option and nb_fits allow to choose how the statistics are computed (single or multiple gaussian fits)
@@ -636,7 +646,8 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-        # TODO: add path to figure to be saved
+        # TODO: update doc with file_title
+
         # load the Dataframes
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -666,11 +677,13 @@ class Time_Delta(ECAL):
         xlabel = 'Run'
         ylabel = 'Time delta (ps)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean time delta over runs'
-
-        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
+        
+        plot_save = self.plot_save_folder + '/run_variation/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title)
 
         
-    def run_variation(self, ref_channel: str = None, all_channels: bool = None, fit_option: str='synchronise', nb_fits: int=None):
+    def run_variation(self, ref_channel: str = None, all_channels: bool = None, fit_option: str='synchronise', nb_fits: int=None, file_title: str=None):
         """
         Plots the evolution over the runs in self.included_runs of the time delta of the channels with respect to the 
         ref_channel on one or all the boards, depending on the value of all_channels. fit_option and nb_fits allow to 
@@ -681,16 +694,17 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
+        # TODO: update doc with file_title
         try:
             if len(self.included_runs) <= 1:
                 raise ValueError("Need at least two runs to plot a variation")
             else:
                 if all_channels:
                     for board in self.letters:
-                        self.__run_single_board(board, ref_channel, fit_option, nb_fits)
+                        self.__run_single_board(board, ref_channel, fit_option, nb_fits, file_title)
                 else:
                     board = ref_channel[0]
-                    self.__run_single_board(board, ref_channel, fit_option, nb_fits)
+                    self.__run_single_board(board, ref_channel, fit_option, nb_fits, file_title)
         except ValueError as e:
             print(e)
 
@@ -706,8 +720,7 @@ class Time_Delta(ECAL):
         :param single_run: The number of a run, for example '15484'
         :param ref_channel: reference channel with respect to which the differences are computed
         """
-        # TODO: add path to figure to be saved
-        # stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
+        
         folder = self.raw_data_folder + str(int(single_run))
         run_name = os.path.basename(os.path.normpath(folder))
         print('Run: ', run_name)
@@ -720,8 +733,12 @@ class Time_Delta(ECAL):
             run_time_df = self.__load_stats(single_run, board, ref_channel, 'run', fit_option, nb_fits)
             mean[:, i] = np.array(list(reversed(run_time_df["mu"])))
 
-        plot_title = f'Run {single_run}, ref {ref_channel}, mean time delta over runs'
-        super()._ECAL__plot_colormesh(mean, plot_title)
+        plot_title = f'Run {single_run}, ref {ref_channel}, mean time delta'
+        
+        file_title = f"Mean Time Delta ref {ref_channel}"
+        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title)
 
         
     def run_colormesh(self, ref_channel: str = None, fit_option: str='synchronise', nb_fits: int=None):
@@ -740,7 +757,7 @@ class Time_Delta(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # RESOLUTION
 
-    def __resolution_single_board(self, board: str=None, ref_channel: str=None):
+    def __resolution_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None):
         """
         Computes and plots the resolution of all the channels in a given board wrt. a given ref_channel. Points are then
         fitted with the general function sigma_t_fit()
@@ -748,7 +765,6 @@ class Time_Delta(ECAL):
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
         """
-        # TODO: add path to figure to be saved
         a = Amplitude(self.included_runs, self.letters) # create new array if ref_channel not in board
         
         # mean amplitude, sigma and associated errors for the chosen board
@@ -830,12 +846,18 @@ class Time_Delta(ECAL):
                                                 )
                                             ]
                              );
+
+            plot_save = self.plot_save_folder + '/resolution/time_delta/'
+            Path(plot_save).mkdir(parents=True, exist_ok=True)
             
-            fig.show()
-            # TODO: save the figure
+            path = plot_save
+            fig.write_image(path + file_title + '.png')
+            fig.write_image(path + file_title + '.pdf')
+            fig.write_image(path + file_title +'.svg')
+            fig.write_html(path + file_title + '.html')
 
 
-    def resolution(self, ref_channel: str=None):
+    def resolution(self, ref_channel: str=None, file_title: str=None):
         """
         Computes and plots the resolution of all board wrt. a given ref_channel. Points are then
         fitted with the general function sigma_t_fit()
@@ -846,7 +868,7 @@ class Time_Delta(ECAL):
             if len(self.included_runs) <= 1:
                 raise ValueError("Need at least two runs to plot a resolution")    
             for board in self.letters:
-                self.__resolution_single_board(board, ref_channel)
+                self.__resolution_single_board(board, ref_channel, file_title)
         except ValueError as e:
             print(e)
             

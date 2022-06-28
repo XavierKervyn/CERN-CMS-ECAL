@@ -135,7 +135,7 @@ class ECAL:
                 
                 
     def __plot_hist(self, df: pd.DataFrame=None, channel: str=None, bin_centers: np.array=None, 
-                    hist_title: str=None, xlabel: str=None, ylabel: str=None, path: str=None, *coeff: tuple):
+                    hist_title: str=None, xlabel: str=None, ylabel: str=None, path: str=None, file_title: str=None, *coeff: tuple):
         """
         Plots the histohram of the DataFrame df for a single channel and with the bin_centers given. Title and labels are 
         also included in the arguments, as well as the path to save the figure and a tuple with the coefficients for the 
@@ -163,23 +163,22 @@ class ECAL:
         trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=['red'])
         fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
 
-        # TODO: uncomment when correct version of plotly
-        #fig.add_vline(x=mean, line_dash='dash', line_color='red')
-        #fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
+        # TODO: check
+        fig.add_vline(x=mean, line_dash='dash', line_color='red')
+        fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
 
         fig.update_layout(title=hist_title,
                          xaxis_title=xlabel,
                          yaxis_title=ylabel)
 
-        # TODO: uncomment with correct version of plotly
-        #fig.write_image('test.png')
-        #fig.write_image('test.pdf')
-        #fig.write_html('test.html')
-        fig.show()
+        fig.write_image(path + file_title + '.png')
+        fig.write_image(path + file_title + '.pdf')
+        fig.write_image(path + file_title +'.svg')
+        fig.write_html(path + file_title + '.html')
 
         
     def __plot_variation(self, df: pd.DataFrame=None, variation: str=None,
-                         xlabel: str=None, ylabel: str=None, plot_title: str=None):
+                         xlabel: str=None, ylabel: str=None, plot_title: str=None, path: str=None, file_title: str=None):
         """
         Plots the variation either over runs or spills of the DataFrame. Title and labels of the axes are included 
         as arguments.
@@ -202,16 +201,13 @@ class ECAL:
         else:
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), 
                                           ticktext=[str(run) for run in self.included_runs]))
-        # TODO: add path to figure to be saved
-        # TODO: save figures
-        """
-        fig.write_image(path+'mean_amplitude.png')
-        fig.write_image(path+'mean_amplitude.pdf')
-        fig.write_image(path+'mean_amplitude.svg')
-        fig.write_html(path+'mean_amplitude.html')
-        """
+
+        fig.write_image(path + file_title + '.png')
+        fig.write_image(path + file_title + '.pdf')
+        fig.write_image(path + file_title +'.svg')
+        fig.write_html(path + file_title + '.html')
         
-    def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None):
+    def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None):
         """
         Plots a 2D colormesh map of the mean of a given quantity (amplitude, amplitude difference, time difference) over all channels
         and boards.
@@ -233,8 +229,8 @@ class ECAL:
         fig.update_layout(title=plot_title)
         
 
-        fig.write_image(path+'mean_amplitude.png')
-        fig.write_image(path+'mean_amplitude.pdf')
-        fig.write_image(path+'mean_amplitude.svg')
-        fig.write_html(path+'mean_amplitude.html')
+        fig.write_image(path + file_title + '.png')
+        fig.write_image(path + file_title + '.pdf')
+        fig.write_image(path + file_title + '.svg')
+        fig.write_html(path + file_title + '.html')
         
