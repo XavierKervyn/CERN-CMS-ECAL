@@ -2,11 +2,13 @@
 
 from .class_ECAL import *
 
-""" 2nd Child Class definition """     
+""" Child Class definition """     
         
 class Amplitude_Delta(ECAL):
     """
-    This class is for the analysis of the amplitude resolution of the detector
+    This class is for the analysis of the amplitude difference between the channels of the detector.
+    
+    With a given list of self.included_runs and a reference_channel, one can plot amplitude delta histograms, variation of the amplitude delta over runs, colormeshes over the channels, as well as the relative amplitude resolution using the public methods.
     
     :param included_runs: list of all the numbers corresponding to the runs to be analyzed
     :param letters: list of all the letters corresponding to the boards connected for the included_runs
@@ -37,7 +39,7 @@ class Amplitude_Delta(ECAL):
         return f'{self.letters[board_counter]}{self.numbers[channel_number]}'
 
     
-    def __compute_amplitude_delta(self, amp: pd.DataFrame=None, board: str=None, ref_channel: str=None) -> pd.DataFrame:
+    def __compute_delta(self, amp: pd.DataFrame=None, board: str=None, ref_channel: str=None) -> pd.DataFrame:
         """ 
         Computes the amplitude difference (delta) for all channels in a board, wrt. a given reference channel. 
         Also returns the mu and sigma statistics and their errors.
@@ -68,10 +70,11 @@ class Amplitude_Delta(ECAL):
         return amp_delta_pd
     
     
-    def __generate_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str='run', plot: bool=False, spill_index: int=None):
+    def __generate_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, 
+                         variation: str='run', plot: bool=False, spill_index: int=None):
         """ 
         Generates the statistics for a given board in a run, either when analyzing spills or runs. Can also plot the histogram of the data.
-        Statistics of the amplitude delta (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
+        Statistics of the amplitude delta Gaussian fit (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
@@ -79,14 +82,23 @@ class Amplitude_Delta(ECAL):
         :param variation: ('run' or 'spill') computing the statistics per run or spill
         :param plot: boolean. If True, the histogram of the data is plotted.
         """
+        # TODO: add path to figure to be saved
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
+                
+            elif board not in self.letters:
+                raise ValueError("Board must be included in the list of letters")
+                
             else:
                 # Computation with merged data
                 folder =  self.raw_data_folder + str(int(single_run))
                 if variation=='spill' and plot==True:
-                    h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
+                    try: # raises an exception if the index references a non-existing spill
+                        h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
+                    except FileNotFoundError as e:
+                        print(e)
+                        return -1
                 else:
                     h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
 
@@ -112,7 +124,7 @@ class Amplitude_Delta(ECAL):
                         h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
                     spill = h1['spill'] 
                     spill_pd = pd.DataFrame(spill, columns=["spill_nb"]) 
-
+                    
                     # merge the two Dataframes
                     aspill_pd = pd.concat([amp_pd, spill_pd], axis=1, join='inner')
 
@@ -126,7 +138,7 @@ class Amplitude_Delta(ECAL):
                     for j, spill in enumerate(spill_set):
                         aspill_pd_temp = aspill_pd[aspill_pd.spill_nb == spill]
 
-                        amp_delta_pd = self.__compute_amplitude_delta(aspill_pd_temp, board, ref_channel)
+                        amp_delta_pd = self.__compute_delta(aspill_pd_temp, board, ref_channel)
 
                         # 'empty' arrays to store the statistics of each channel
                         mu_arr = np.zeros(len(self.numbers))
@@ -159,7 +171,7 @@ class Amplitude_Delta(ECAL):
 
                             if plot:
                                 title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}, Spill {spill}'
-                                xlabel = 'Amplitude delta (??)'
+                                xlabel = 'Amplitude delta (ADC counts)'
                                 ylabel = 'Occurence (a.u.)'
                                 path = ''
                                 super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
@@ -190,7 +202,7 @@ class Amplitude_Delta(ECAL):
                                                   + f'/Spill error sigma amplitude delta run {single_run} board {board} ref {ref_channel}.csv')
 
                 else: # if variation=='run':
-                    amp_delta_pd = self.__compute_amplitude_delta(amp_pd, board, ref_channel)
+                    amp_delta_pd = self.__compute_delta(amp_pd, board, ref_channel)
 
                     # 'empty' arrays to store the statistics of each channel
                     mu_arr = np.zeros(len(self.numbers))
@@ -222,8 +234,8 @@ class Amplitude_Delta(ECAL):
                         sigma_error_arr[i] = sigma_error
 
                         if plot:
-                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}, Run {single_run}'
-                            xlabel = 'Amplitude delta (??)'
+                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}'
+                            xlabel = 'Amplitude delta (ADC counts)'
                             ylabel = 'Occurence (a.u.)'
                             path = ''
                             super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
@@ -243,8 +255,8 @@ class Amplitude_Delta(ECAL):
     def __load_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: bool=None) -> Union[tuple, pd.DataFrame]:
         """
         Loads the file containing the statistics for a single triplet (run, board, ref_channel). 
-        If the file does not exist, calls __generate_stats()
-        Returns the DataFrames generated from the .csv file(s)
+        If the file does not exist, calls __generate_stats().
+        Returns the DataFrames generated from the .csv file(s).
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
@@ -299,20 +311,34 @@ class Amplitude_Delta(ECAL):
                                    + f'/Run amplitude delta run {single_run} board {board} ref {ref_channel}.csv')
         except:
             raise Exception('Could not load nor generate .csv file')
+            
+            
+    def get_mean(self, single_run: int=None, board: str=None, ref_channel: str=None) -> pd.core.series.Series:
+        """
+        Getter method for the mean of the amplitude delta Gaussian fit for the channels in the board with respect to the ref_channel in the single_run. Returns a container with the mean amplitude deltas for each of the channels in the board.
         
+        :param single_run: number associated with the run to be analyzed, eg. 15610
+        :param board: board to be analyzed with the run, eg. 'C'
+        :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
+        
+        :return: pandas.core.series.Series containing the mean of the amplitude delta for each of the channels in the board with respect to the ref_channel
+        """
+        df = self.__load_stats(single_run, board, ref_channel, variation='run')
+        return df["mu"]
             
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
     
-    def __amplitude_delta_spill_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None): 
+    def __spill_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None): 
         """
         Plots the evolution of the amplitude delta per spill for a given board in a single run. 
-        The delta is taken wrt. the reference channel ref_channel
+        The delta is taken wrt. the reference channel ref_channel.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
+        # TODO: add path to figure to be saved
         # load the Dataframes
         mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, ref_channel, 'spill')
         num_spills = mean.shape[0] # number of spills in the single run
@@ -337,18 +363,18 @@ class Amplitude_Delta(ECAL):
         plot_df = pd.DataFrame({"spill": spill_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
       
         xlabel = 'Spill'
-        ylabel = 'Amplitude delta (??)'
+        ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean amplitude delta over spills'
         
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
 
         
-    def __amplitude_delta_spill_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None):
+    def __spill_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None):
         """
-        Plots the evolution of the amplitude delta per spill for a single run 
-        The delta is taken wrt. the reference channel ref_channel
-        If all_channels is true, the plot is done for all other channels in self.channel_names
-        Otherwise, the plot is done for all channels in the board corresponding to the reference channel, eg. 'A' if ref_channel = 'A1'
+        Plots the evolution of the amplitude delta per spill for a single run.
+        The delta is taken wrt. the reference channel ref_channel.
+        If all_channels is true, the plot is done for all other channels in self.channel_names.
+        Otherwise, the plot is done for all channels in the board corresponding to the reference channel, eg. 'A' if ref_channel = 'A1'.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
@@ -356,24 +382,24 @@ class Amplitude_Delta(ECAL):
         """
         if all_channels:
             for board in self.letters:
-                self.__amplitude_delta_spill_single_board(single_run, board, ref_channel)
+                self.__spill_single_board(single_run, board, ref_channel)
         else:
             board = ref_channel[0]
-            self.__amplitude_delta_spill_single_board(single_run, board, ref_channel)
+            self.__spill_single_board(single_run, board, ref_channel)
     
     
-    def variation_amplitude_delta_spill(self, ref_channel: str=None, all_channels: bool=None):
+    def spill_variation(self, ref_channel: str=None, all_channels: bool=None):
         """
-        Plots the evolution of the amplitude delta per spill for all the single runs in self.included_runs 
-        The delta is taken wrt. the reference channel ref_channel
-        If all_channels is true, the plot is done for all other channels in self.channel_names
-        Otherwise, the plot is done for all channels in the board corresponding to the reference channel, eg. 'A' if ref_channel = 'A1'
+        Plots the evolution of the amplitude delta per spill for all the single runs in self.included_runs.
+        The delta is taken wrt. the reference channel ref_channel.
+        If all_channels is true, the plot is done for all other channels in self.channel_names.
+        Otherwise, the plot is done for all channels in the board corresponding to the reference channel, eg. 'A' if ref_channel = 'A1'.
         
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         :param all_channels: plotting either for all channels self.channel_names or only for those in the board to which ref_channel belongs
         """
         for single_run in self.included_runs:
-            self.__amplitude_delta_spill_single_run(single_run, ref_channel, all_channels)
+            self.__spill_single_run(single_run, ref_channel, all_channels)
 
             
     # ------------------------------------------------------------------------------------------------------------------------------
@@ -381,9 +407,10 @@ class Amplitude_Delta(ECAL):
     
     # --- HISTOGRAMS ---
     
-    def __hist_amplitude_delta_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str='run', spill_i: int=None):
+    def __hist_single_board(self, single_run: int=None, board: str=None, ref_channel: str=None, variation: str='run', spill_i: int=None):
         """ 
-        Generates the statistics for a given board in a run and plots the histogram of the data.
+        Generates the statistics for a run and plots the histograms of the amplitude delta for the channels in the board considered.
+        If variation is "run", then the histograms contain all the events in the single_run. If variation is "spill", the histogram contains the events in the spill_i of the single_run.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
@@ -392,44 +419,51 @@ class Amplitude_Delta(ECAL):
         self.__generate_stats(single_run, board, ref_channel, variation, plot=True, spill_index=spill_i)
         
             
-    def __hist_amplitude_delta_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None, variation: str='run', spill_i: int=None):
+    def __hist_single_run(self, single_run: int=None, ref_channel: str=None, all_channels: bool=None, variation: str='run', spill_i: int=None):
         """ 
-        Generates the statistics for a run and plots the histogram of the data
-        Does it either for all channels self.channel_names or only for those in the board to which ref_channel belongs
+        Generates the statistics for a run and plots the histograms of the amplitude delta for all the channels considered.
+        Does it either for all channels self.channel_names or only for those in the board to which ref_channel belongs.
+        If variation is "run", then the histograms contain all the events in the single_run. If variation is "spill", the histogram contains the events in the spill_i of the single_run.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         :param all_channels: plotting either for all channels self.channel_names or only for those in the board to which ref_channel belongs
+        :param variation: either "run" or "spill". If variation is "run", then the histograms contain all the events in the single_run. If variation is "spill", the histogram contains the events in the spill_i of the single_run.
+        :param spill_i: index of the spill to be considered in the case variation="spill"
         """
         if all_channels:
             for board in self.letters:
-                self.__hist_amplitude_delta_single_board(single_run, board, ref_channel, variation, spill_i)
+                self.__hist_single_board(single_run, board, ref_channel, variation, spill_i)
         else:
             board = ref_channel[0]
-            self.__hist_amplitude_delta_single_board(single_run, board, ref_channel, variation, spill_i)
+            self.__hist_single_board(single_run, board, ref_channel, variation, spill_i)
     
     
-    def hist_amplitude_delta(self, ref_channel: str=None, all_channels: bool=None, variation: str='run', spill_i: int=None):
+    def hist(self, ref_channel: str=None, all_channels: bool=None, variation: str='run', spill_i: int=None):
         """
-        Plots the histogram for every single run in self.included_runs
-        Does it either for all channels self.channel_names or only for those in the board to which ref_channel belongs
-        
+        Generate the statistics and plots the histogram of the amplitude delta of all the channels considered for all the runs in self.included_runs. The delta is taken with respect to the ref_channel for every single run in self.included_runs.
+        Does it either for all channels self.channel_names or only for those in the board to which ref_channel belongs.
+        If variation is "run", then the histograms contain all the events in the single_run. If variation is "spill", the histogram contains the events in the spill_i of the single_run.
+
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         :param all_channels: plotting either for all channels self.channel_names or only for those in the board to which ref_channel belongs
+        :param variation: either "run" or "spill". If variation is "run", then the histograms contain all the events in the single_run. If variation is "spill", the histogram contains the events in the spill_i of the single_run.
+        :param spill_i: index of the spill to be considered in the case variation="spill"
         """
         for single_run in self.included_runs:
-            self.__hist_amplitude_delta_single_run(single_run, ref_channel, all_channels, variation, spill_i)
+            self.__hist_single_run(single_run, ref_channel, all_channels, variation, spill_i)
 
             
     # --- VARIATION OVER RUNS ---
     
-    def __amplitude_delta_run_single_board(self, board: str=None, ref_channel: str=None):
+    def __run_single_board(self, board: str=None, ref_channel: str=None):
         """
         Plots evolution of the mean amplitude over self.included_runs for given board and reference channel
         
         :param board: board to be analyzed with the run, eg. 'C'
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
+        # TODO: add path to figure to be saved
         # load the Dataframes     
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -456,13 +490,13 @@ class Amplitude_Delta(ECAL):
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
         
         xlabel = 'Run'
-        ylabel = 'Amplitude delta (??)'
+        ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean amplitude over runs'
         
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
     
 
-    def variation_amplitude_delta_run(self, ref_channel: str=None, all_channels: bool=None):
+    def run_variation(self, ref_channel: str=None, all_channels: bool=None):
         """
         Plots evolution of the mean amplitude over self.included_runs for a given reference channel
         Does it either for all channels self.channel_names or only for those in the board to which ref_channel belongs
@@ -476,24 +510,24 @@ class Amplitude_Delta(ECAL):
             else:
                 if all_channels:
                     for board in self.letters:
-                        self.__amplitude_delta_run_single_board(board, ref_channel)
+                        self.__run_single_board(board, ref_channel)
                 else:
                     board = ref_channel[0]
-                    self.__amplitude_delta_run_single_board(board, ref_channel)
+                    self.__run_single_board(board, ref_channel)
         except ValueError as e:
             print(e)
             
     
     # --- STATISTICS OVER RUNS ---
     
-    def __run_statistics_single_run(self, single_run: int=None, ref_channel: str=None):
+    def __run_colormesh_single_run(self, single_run: int=None, ref_channel: str=None):
         """ 
         Plots the colormesh map with the mean amplitude (mu) over self.channel_names for a given single_run.
-        Could also do the same with mu error, sigma, sigma error.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
+        # TODO: add path to figure to be saved
         stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
         folder =  self.raw_data_folder + str(int(single_run))
         run_name = os.path.basename(os.path.normpath(folder))
@@ -501,7 +535,6 @@ class Amplitude_Delta(ECAL):
         run_save = self.save_folder + '/Run ' + str(run_name) + '/'
         Path(run_save).mkdir(parents=True, exist_ok=True)
 
-        # TODO: do we also want to plot sigma, mu_err, sigma_err?
         mean = np.zeros((len(self.numbers), len(self.letters)))
         for i, board in enumerate(self.letters):
             run_amplitude_delta_df = self.__load_stats(single_run, board, ref_channel, variation='run')
@@ -512,9 +545,12 @@ class Amplitude_Delta(ECAL):
         super()._ECAL__plot_colormesh(mean, plot_title)
 
         
-    def run_statistics(self, ref_channel):
+    def run_colormesh(self, ref_channel: str=None):
         """
         Plots the colormesh map with the mean amplitude over self.channel_names for every single_run in self.included_runs.
+        
+        :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
+        # TODO: add path to figure to be saved
         for single_run in self.included_runs:
-            self.__run_statistics_single_run(single_run, ref_channel)
+            self.__run_colormesh_single_run(single_run, ref_channel)

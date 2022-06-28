@@ -20,22 +20,12 @@ setup(name='ecalautoanalysis',
         "Operating System :: Linux",
       ],
       python_requires=">=3.6",
-      install_requires=[
-          'uproot',
-          'numpy',
-          'pandas',
-          'awkward',
-          'plotly',
-          'matplotlib',
-          'scipy',
-          'pathlib',
-          'typing'
+      install_requires=[  
       ]
 )
 
 # TODO: add these dependencies for lxplus
-"""
-          'uproot',
+"""'uproot',
           'numpy',
           'pandas',
           'awkward',
@@ -43,4 +33,4 @@ setup(name='ecalautoanalysis',
           'matplotlib',
           'scipy',
           'pathlib',
-          'typing' """
+          'typing'"""
