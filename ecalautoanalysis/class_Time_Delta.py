@@ -360,7 +360,7 @@ class Time_Delta(ECAL):
 
             
     def __load_stats(self, single_run: int = None, board: str = None, ref_channel: str = None, variation: str = None, 
-                     fit_option: str=None, nb_fits: int=None) -> Union[tuple, pd.DataFrame]:
+                     fit_option: str="synchronise", nb_fits: int=None) -> Union[tuple, pd.DataFrame]:
         """
         Returns the Gaussian curve fit statistics of the time delta with respect to ref_channel for a single_run and board.
         If variation='run', considers the fit over the entire run, if variation='spill', considers the fit over each spill separately.
