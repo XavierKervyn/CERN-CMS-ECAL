@@ -218,8 +218,22 @@ class ECAL:
         mean_df = pd.DataFrame(mean)
         mean_df.columns = self.letters
         mean_df.index = reversed(self.numbers)
+        display(mean_df)
         
-        fig = px.imshow(mean_df)
+        fig = px.imshow(mean_df,
+                        labels=dict(x="Board", y="Channel"),
+                        x=self.letters,
+                        y=reversed(self.numbers)
+                       )
+        
+        # TODO: add label
+        """
+        fig = px.imshow(mean_df,
+                        labels=dict(x="Board", y="Channel"),
+                        x=self.letters,
+                        y=reversed(self.numbers)
+                       )
+        """
         fig.update_layout(title=plot_title)
         
         # TODO: add path to figure to be saved
