@@ -1,19 +1,33 @@
 """ Imports """
 
 from .class_ECAL import *
+from .class_Amplitude import * # this import is needed for the resolution
 
-from .class_Amplitude import *
+""" General function"""
 
-""" 2nd Child Class definition """
-
-def sigma_t_fit(A, *p):
+def sigma_t_fit(A: float=None, *p: tuple) -> float:
+    """
+    Time resolution as a function of the mean amplitude A, with parameters *p to be fitted.
+    
+    :param A: point at which we evaluate the expression
+    :param *p: pointer to the parameters N and c to be fitted
+    
+    :return: the time resolution for the given mean amplitude A
+    """
     sigma_N = 1 # TODO: calculate actual pedestal sigma
     N, c = p
     return np.sqrt( (N*sigma_N/A)**2 + c**2 )
 
+
+""" Child Class definition """
+
 class Time_Delta(ECAL):
     """
-    Class for the analysis of the time resolution of the detector
+    This class serves for the analysis of the time resolution of the detector. It has a few general private methods 
+    to synchronise the different times, compute the time difference between two channels, generate the statistics
+    of the data, load the data, as well as a few public getters for the mean and the standard deviation of the time delta
+    and their respective errors. The other sets of metods either analyse the spills, the runs, plot colormesh of the statistics
+    or study the time resolution of the system.
 
     :param included_runs: the list of the runs one wants to consider
     :param letters: the list of boards
@@ -21,12 +35,14 @@ class Time_Delta(ECAL):
     :param raw_data_folder: folder where the .root input reconstruction files are stored
     :param plot_save_folder: folder where the plots produced are to be staved
     """
-
     def __init__(self, included_runs: List[int] = None, letters: str = None,
                  save_folder: str = save_folder_global, raw_data_folder: str = raw_data_folder_global,
                  plot_save_folder: str = plot_save_folder_global):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
 
+    
+    # ------------------------------------------------------------------------------------------------------------------------------
+    # GENERAL
         
     def __synchroniser(self, value: float = None) -> float:
         """
@@ -36,7 +52,8 @@ class Time_Delta(ECAL):
         :param value: list of time deltas for a single channel to synchronise
         :return: synchronised value
         """
-        window_leniency = 0.5  # How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5
+        # How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5
+        window_leniency = 0.5  
         if value > 0:
             while value > self.clock_period * window_leniency:
                 value -= self.clock_period
@@ -45,10 +62,11 @@ class Time_Delta(ECAL):
                 value += self.clock_period
         return float(Decimal(value) % Decimal(self.clock_period))
 
+    
     def __compute_time_delta(self, time: pd.DataFrame = None, board: str = None, ref_channel: int = None,
                              apply_synchroniser: bool = True) -> pd.DataFrame:
         """
-        Computes the time difference (delta) for a given reference channel versus the channels in the board given.
+        Computes the time difference (delta) for a given reference channel versus the channels in the board given as argument.
 
         :param time: 2D dataframe containing the time for all the events considered (rows) for the channels with the given board (rows)
         :param board: board considered
@@ -57,7 +75,6 @@ class Time_Delta(ECAL):
 
         :return: DataFrame of the time deltas, the columns being the channels and the rows the events
         """
-
         # Rename the column names with the channels in self._channel_names
         time_pd = time
         n_numbers = len(self.numbers)
@@ -77,27 +94,34 @@ class Time_Delta(ECAL):
             if apply_synchroniser:
                 time_delta = time_delta.apply(self.__synchroniser)
 
-            time_delta = time_delta.multiply(1000)  # TODO: why?
-
-            # Save time deltas for later analysis
-
-            time_delta_pd[f'{channel}'] = time_delta
+            time_delta = time_delta.multiply(1000)  # convert into picoseconds
+            time_delta_pd[f'{channel}'] = time_delta # Save time deltas for later analysis
+            
         return time_delta_pd
 
+    
     def __generate_stats(self, single_run: int = None, board: str = None, ref_channel: str = None,
                          variation: str = None, plot: bool = False, spill_index: int = None, fit_option: str=None, nb_fits: int=None):
-        # TODO: update dosctring
         """
-        Creates the histograms of the time delta for a single run and single board and saves the Gaussian curve fit parameters and errors mu, mu_err, sigma, sigma_err in csv files.
-        If variation='run', only one .csv file is created, the columns being the two fit parameters and their errors and the rows being the channels within the board considered.
-        If variation='spill', four .csv files are created, the columns being the channels within the board considered, and the rows are the different spills within the single_run.
+        Creates the histograms of the time delta for a single run and single board and saves the Gaussian curve fit parameters 
+        and errors mu, mu_err, sigma, sigma_err in csv files. If variation='run', only one .csv file is created, the columns 
+        being the two fit parameters and their errors and the rows being the channels within the board considered. If variation='spill', 
+        four .csv files are created, the columns being the channels within the board considered, and the rows are the different spills 
+        within the single_run. The spill_index argument allows to consider only a given spill and thereby visualize the evolution spill
+        after spill (useful feature for the DQM system). Finally, fit_option and nb_fits allow to choose a different way of computing the
+        statistics.
 
         :param single_run: the number of a run, for example '15610'
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param variation: either 'run' or 'spill'. If 'run', the histograms are computed over a full run, if 'spill' the histograms are computed separately for each spill in single_run.
+        :param variation: either 'run' (histograms are computed over a full run) or 'spill' (separately for each spill in single_run).
         :param plot: If True, plots the histograms and fit, not if False
+        :param spill_index: integer corresponding to the spill to consider, eg. 3 for the third one.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
+        # TODO: create exception for spill_index
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
@@ -107,7 +131,7 @@ class Time_Delta(ECAL):
                 folder = self.raw_data_folder + str(int(single_run))
                 if variation == 'spill' and plot == True:
                     h2 = uproot.concatenate({folder + f'/{spill_index}.root': 'digi'}, allow_missing=True)
-                else:
+                else: # if variation == 'run'
                     h2 = uproot.concatenate({folder + '/*.root': 'digi'}, allow_missing=True)
 
                 run_name = os.path.basename(os.path.normpath(folder))
@@ -148,9 +172,9 @@ class Time_Delta(ECAL):
                         tspill_pd_temp = tspill_pd[tspill_pd.spill_nb == spill]
                         
                         if fit_option == 'synchronise':
-                            apply_synchroniser = True
+                            apply_synchroniser = True # the time deltas will be synchronized
                         else:
-                            apply_synchroniser = False
+                            apply_synchroniser = False 
                         time_delta_pd = self.__compute_time_delta(tspill_pd_temp, board, ref_channel, apply_synchroniser)
 
                         # 'empty' arrays to store the statistics of each channel
@@ -167,7 +191,7 @@ class Time_Delta(ECAL):
                             bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
                             
                             if fit_option == 'synchronise' or fit_option == None:
-                                # fitting process
+                                # fitting process with one gaussian
                                 mean_guess = np.average(bin_centers, weights=hist)
                                 sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
@@ -196,14 +220,13 @@ class Time_Delta(ECAL):
                                         
                                     guess += [amp_guess, mean_guess, sigma_guess]
                                 
-                                coeff, covar = curve_fit(multiple_gaussians, bin_centers, hist, p0=guess, maxfev=5000)
-                                
+                                coeff, covar = curve_fit(multiple_gaussians, bin_centers, hist, p0=guess, maxfev=5000) # fit the curve
                                 
                                 for index, k in enumerate(np.arange(-(nb_fits-1)/2, (nb_fits+1)/2)):
                                     amp_list.append(coeff[3*index]) 
                                     mu_list.append(coeff[3*index+1] - k*self.clock_period*1000)
                                     sigma_list.append(coeff[3*index+2])
-                                        
+                                
                                 mu_error_list = [np.sqrt(covar[m,m]) for m in range(len(coeff)) if m%3 == 1]
                                 sigma_error_list = [np.sqrt(covar[m,m]) for m in range(len(coeff)) if m%3 == 2]
                                 
@@ -248,7 +271,7 @@ class Time_Delta(ECAL):
 
                 else:  # variation=='run':
                     if fit_option == 'synchronise':
-                        apply_synchroniser = True
+                        apply_synchroniser = True # the time deltas will be synchronized
                     else:
                         apply_synchroniser = False
                     time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser)
@@ -267,7 +290,7 @@ class Time_Delta(ECAL):
                         bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
 
                         if fit_option == 'synchronise' or fit_option == None:
-                            # fitting process
+                            # fitting process with one gaussian
                             mean_guess = np.average(bin_centers, weights=hist)
                             sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
@@ -335,6 +358,7 @@ class Time_Delta(ECAL):
         except ValueError as e:
             print(e)
 
+            
     def __load_stats(self, single_run: int = None, board: str = None, ref_channel: str = None, variation: str = None, 
                      fit_option: str=None, nb_fits: int=None) -> Union[tuple, pd.DataFrame]:
         """
@@ -344,7 +368,10 @@ class Time_Delta(ECAL):
         :param single_run: the number of a run, for example '15610'
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param variation: either 'run' or 'spill'. If 'run', loads the statistics for the entire run, if 'spill' loads the statistics for each spill.
+        :param variation: either 'run' (loads the statistics for the entire run) or 'spill' (for each spill).
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
 
         :return: DataFrame of tuple of DataFrame of the .csv file(s) loaded (TODO: unique type?)
         """
@@ -384,26 +411,63 @@ class Time_Delta(ECAL):
         except:
             raise Exception('Could not load nor generate .csv file')
 
-    def get_mean(self, single_run: int=None, board: str=None, ref_channel: str=None):
-        # TODO: docstrings
+            
+    def get_mean(self, single_run: int=None, board: str=None, ref_channel: str=None) -> pd.core.series.Series:
+        """
+        Getter for the average time difference wrt. to a ref_channel for the entire channels in a board of a single run.
+        
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        
+        :return: column of the dataframe containing the average time difference for each channel of the board in the rows
+        """
         df = self.__load_stats(single_run, board, ref_channel, variation='run')
         return df["mu"]
     
     
-    def get_sigma(self, single_run: int=None, board: str=None, ref_channel: str=None):
+    def get_sigma(self, single_run: int=None, board: str=None, ref_channel: str=None) -> pd.core.series.Series:
+        """
+        Getter for the standard deviation of time difference wrt. to a ref_channel for the entire channels in a board of a single run.
+        
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        
+        :return: column of the dataframe containing the standard deviation of the time difference for each channel of the board in the rows
+        """
         df = self.__load_stats(single_run, board, ref_channel, variation='run')
         return df["sigma"]
     
     
-    def get_mean_err(self, single_run: int=None, board: str=None, ref_channel: str=None):
+    def get_mean_err(self, single_run: int=None, board: str=None, ref_channel: str=None) -> pd.core.series.Series:
+        """
+        Getter for the error on the average time difference wrt. to a ref_channel for the entire channels in a board of a single run.
+        
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        
+        :return: column of the dataframe containing the error on the average time difference for each channel of the board in the rows
+        """
         df = self.__load_stats(single_run, board, ref_channel, variation='run')
         return df["mu error"]
     
     
-    def get_sigma_err(self, single_run: int=None, board: str=None, ref_channel: str=None):
+    def get_sigma_err(self, single_run: int=None, board: str=None, ref_channel: str=None) -> pd.core.series.Series:
+        """
+        Getter for the error on the std dev of the time difference wrt. to a ref_channel for the entire channels in a board of a single run.
+        
+        :param single_run: the number of a run, for example '15610'
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        
+        :return: column of the dataframe containing the error on the std dev. of the time difference for each channel of the board in the rows
+        """
         df = self.__load_stats(single_run, board, ref_channel, variation='run')
         return df["sigma error"]
             
+        
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
 
@@ -411,13 +475,16 @@ class Time_Delta(ECAL):
                              fit_option: str=None, nb_fits: int=None):
         """
         Plots the evolution over the spills in the single_run of the time delta of the channels on the board with
-        respect to the ref_channel.
+        respect to the ref_channel. Finally, fit_option and nb_fits allow to choose a different way of computing the
+        statistics.
 
         :param single_run: the number of a run, for example '15610'
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-
         # load the Dataframes
         mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, ref_channel, 'spill', fit_option, nb_fits)
         num_spills = mean.shape[0]  # number of spills in the single run
@@ -448,14 +515,21 @@ class Time_Delta(ECAL):
 
         super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
 
+        
     def __spill_single_run(self, single_run: int = None, ref_channel: str = None, all_channels: bool = None, 
                            fit_option: str=None, nb_fits: int=None):
         """
-        Plots the evolution over the spills in the single_run of the time delta of the channels with respect to the ref_channel on one or all the boards depending on all_channels.
+        Plots the evolution over the spills in the single_run of the time delta of the channels with respect to the ref_channel 
+        on one or all the boards depending on all_channels. fit_option and nb_fits allow to choose a different way 
+        of computing the statistics. 
 
         :param single_run: the number of a run, for example '15610'
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param all_channels: If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param all_channels: True (plots of the time delta evolution with respect to ref_channel for all boards), 
+        False (only for the board of ref_channel).
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         if all_channels:
             for board in self.letters:
@@ -464,17 +538,24 @@ class Time_Delta(ECAL):
             board = ref_channel[0]
             self.__spill_single_board(single_run, board, ref_channel, fit_option, nb_fits)
 
+            
     def spill_variation(self, ref_channel: str = None, all_channels: bool = None, fit_option: str='synchronise', nb_fits: int=None):
         """
-        Plots the evolution over the spills in each of the runs in self.included_runs of the time delta of the channels with respect to the ref_channel on one or all the boards, depending on the value of all_channels.
+        Plots the evolution over the spills in each of the runs in self.included_runs of the time delta of the channels with respect 
+        to the ref_channel on one or all the boards, depending on the value of all_channels. fit_option and nb_fits allow to 
+        choose a different way of computing the statistics. 
 
         :param ref_channel: reference channel with respect to which the differences are computed
-        :param all_channels: If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param all_channels: True (plots of the time delta evolution with respect to ref_channel for all boards), 
+        False (only for the board of ref_channel).
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-
         for single_run in self.included_runs:
             self.__spill_single_run(single_run, ref_channel, all_channels, fit_option, nb_fits)
 
+            
     # ------------------------------------------------------------------------------------------------------------------------------
     # RUNS
 
@@ -483,19 +564,28 @@ class Time_Delta(ECAL):
     def __hist_single_board(self, single_run: int = None, board: str = None, ref_channel: str = None,
                                        variation: str = None, spill_i: int = None, fit_option: str=None, nb_fits: int=None):
         """
-        Plots the histograms and corresponding Gaussian fits of the time delta of the channels included in the board with respect to the ref_channel for the single_run considered.
+        Plots the histograms and corresponding Gaussian fits of the time delta of the channels included in the board with 
+        respect to the ref_channel for the single_run considered. fit_option and nb_fits allow to choose a different way of 
+        computing the statistics. 
 
         :param single_run: the number of a run, for example '15610'
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
+        :param variation: either 'run' (loads the statistics for the entire run) or 'spill' (for each spill).
+        :param spill_i: integer corresponding to the spill to consider, eg. 3 for the third one.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         self.__generate_stats(single_run, board, ref_channel, variation, plot=True, spill_index=spill_i, 
                               fit_option=fit_option, nb_fits=nb_fits)
 
+        
     def __hist_single_run(self, single_run: int = None, ref_channel: str = None, all_channels: bool = None,
                                      variation: str = None, spill_i: int = None, fit_option: str=None, nb_fits: int=None):
         """
-        Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with respect to the ref_channel for the single_run considered.
+        Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered 
+        with respect to the ref_channel for the single_run considered.
         The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels.
 
         :param single_run: the number of a run, for example '15610'
@@ -509,28 +599,39 @@ class Time_Delta(ECAL):
             board = ref_channel[0]
             self.__hist_single_board(single_run, board, ref_channel, variation, spill_i, fit_option, nb_fits)
 
+            
     def hist(self, ref_channel: str = None, all_channels: bool = None, variation: str = 'run',
                         spill_i: int = None, fit_option: str='synchronise', nb_fits: int=None):
         """
-        Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with respect to the ref_channel for the single_run considered.
-        The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels.
+        Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with 
+        respect to the ref_channel for the single_run considered. The boards considered can either be all of them, or only the 
+        one of ref_channel, depending on the value of all_channels. 
 
         :param ref_channel: reference channel with respect to which the differences are computed
         :param all_channels: If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param variation: either 'run' (loads the statistics for the entire run) or 'spill' (for each spill).
+        :param spill_i: integer corresponding to the spill to consider, eg. 3 for the third one.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         for single_run in self.included_runs:
             self.__hist_single_run(single_run, ref_channel, all_channels, variation, spill_i, fit_option, nb_fits)
 
+            
     # ---- VARIATION OVER RUNS ----
 
     def __run_single_board(self, board: str = None, ref_channel: str = None, fit_option: str=None, nb_fits: int=None):
         """
         Plots the evolution over the runs of the time delta of the channels on the board with respect to the ref_channel.
+        fit_option and nb_fits allow to choose how the statistics are computed (single or multiple gaussian fits)
 
         :param board: board considered
         :param ref_channel: reference channel with respect to which the differences are computed
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-
         # load the Dataframes
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -563,12 +664,18 @@ class Time_Delta(ECAL):
 
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
 
+        
     def run_variation(self, ref_channel: str = None, all_channels: bool = None, fit_option: str='synchronise', nb_fits: int=None):
         """
-        Plots the evolution over the runs in self.included_runs of the time delta of the channels with respect to the ref_channel on one or all the boards, depending on the value of all_channels.
+        Plots the evolution over the runs in self.included_runs of the time delta of the channels with respect to the 
+        ref_channel on one or all the boards, depending on the value of all_channels. fit_option and nb_fits allow to 
+        choose how the statistics are computed (single or multiple gaussian fits)
 
         :param ref_channel: reference channel with respect to which the differences are computed
         :param all_channels: If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         try:
             if len(self.included_runs) <= 1:
@@ -583,12 +690,14 @@ class Time_Delta(ECAL):
         except ValueError as e:
             print(e)
 
+        
     # ---- STATISTICS OVER RUNS ----
 
     def __run_colormesh_single_run(self, single_run: int = None, ref_channel: str = None, fit_option: str=None, nb_fits: int=None):
         """
         Plots mean mu for the time delta with respect to ref_channel of a designated single_run in a colormesh plot.
-        The mesh represents all the channels and the color represents the time delta.
+        The mesh represents all the channels and the color represents the time delta. fit_option and nb_fits allow to 
+        choose how the statistics are computed (single or multiple gaussian fits)
 
         :param single_run: The number of a run, for example '15484'
         :param ref_channel: reference channel with respect to which the differences are computed
@@ -609,33 +718,46 @@ class Time_Delta(ECAL):
         plot_title = f'Run {single_run}, ref {ref_channel}, mean time delta over runs'
         super()._ECAL__plot_colormesh(mean, plot_title)
 
+        
     def run_colormesh(self, ref_channel: str = None, fit_option: str='synchronise', nb_fits: int=None):
         """
         Plots mean mu for the time delta with respect to ref_channel of the runs in self.included_runs in
         colormesh plots. The mesh represents all the channels and the color represents the time delta.
 
         :param ref_channel: reference channel with respect to which the differences are computed
+        :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. 
+        Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
+        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         for single_run in self.included_runs:
             self.__run_colormesh_single_run(single_run, ref_channel, fit_option, nb_fits)
             
-# --------------------------------------------------------------------------------------
+    
+    # ------------------------------------------------------------------------------------------------------------------------------
+    # RESOLUTION
 
-    def __resolution_single_board(self, board, ref_channel):
-        # TODO: docstring
+    def __resolution_single_board(self, board: str=None, ref_channel: str=None):
+        """
+        Computes and plots the resolution of all the channels in a given board wrt. a given ref_channel. Points are then
+        fitted with the general function sigma_t_fit()
+        
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        """
         # TODO: exception if bad ref_channel or board
-        # TODO: create new array if ref_channel not in board
+        a = Amplitude(self.included_runs, self.letters) # create new array if ref_channel not in board
         
-        a = Amplitude(self.included_runs, self.letters)
-        
+        # mean amplitude, sigma and associated errors for the chosen board
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         
+        # mean amplitude and associated error for the board containing the reference channel
         A_ref_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         A_ref_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
 
+        # fill the lists
         for i, single_run in enumerate(self.included_runs):
             A_lst[i] = a.get_mean(single_run, board)
             sigma_lst[i] = np.abs(self.get_sigma(single_run, board, ref_channel))
@@ -645,36 +767,42 @@ class Time_Delta(ECAL):
             A_ref_lst[i] = a.get_mean(single_run, ref_channel[0])
             A_ref_err_lst[i] = a.get_mean_err(single_run, ref_channel[0])
 
+        # keep only the data for the ref_channel
         A2 = A_ref_lst[:,int(ref_channel[1])-1]
         dA2 = A_ref_err_lst[:,int(ref_channel[1])-1]
 
         for j, channel in enumerate([board+number for number in self.numbers]):
-            if j == 0: # TODO: remove
+            if j == 0: # TODO: remove, this is because the channel C1 was not working properly
                 continue
-            if channel == ref_channel:
+            if channel == ref_channel: # ignore the reference channel if it is in the board given
                 continue
             A1 = A_lst[:,j]
             dA1 = A_err_lst[:,j]
             x = A1*A2 / np.sqrt(A1**2 + A2**2)
 
-            guess = [100000, 50]
-            coeff, covar = curve_fit(sigma_t_fit, x, sigma_lst[:,j], p0=guess, maxfev=5000)
+            guess = [100000, 50] # provide a good first guess to compute the fit
+            coeff, covar = curve_fit(sigma_t_fit, x, sigma_lst[:,j], p0=guess, maxfev=5000) # fit the coefficients to the data
 
+            # create the plotly figure
             fig = make_subplots(specs=[[{"secondary_y": False}]])
             
-            xerror = x * (dA1/A1 + dA2/A2 + (A1*dA1 + A2*dA2)/(A1**2 + A2**2))
+            # define the errorbars
+            xerror = x * (dA1/A1 + dA2/A2 + (A1*dA1 + A2*dA2)/(A1**2 + A2**2)) # 'mean' amplitude across channels 
             yerror = sigma_err_lst[:,j]
-            df_data = pd.DataFrame({'x': x, 'y': sigma_lst[:,j], "err_x": xerror, "err_y": yerror})
-            trace1 = px.scatter(data_frame=df_data, x='x', y='y', error_x="err_x", error_y="err_y", color_discrete_sequence=["Crimson"], labels={
-                     "y": r"$\sigma_{\Delta t}$ (ps)"
-                 })
-            fig.add_trace(trace1.data[0])
             
-            xx = np.linspace(np.min(x), np.max(x))
+            df_data = pd.DataFrame({'x': x, 'y': sigma_lst[:,j], "err_x": xerror, "err_y": yerror})
+            trace1 = px.scatter(data_frame=df_data, x='x', y='y', 
+                                error_x="err_x", error_y="err_y", 
+                                color_discrete_sequence=["Crimson"], 
+                                labels={"y": r"$\sigma_{\Delta t}$ (ps)"})
+            fig.add_trace(trace1.data[0]) # add the trace to the figure
+            
+            xx = np.linspace(np.min(x), np.max(x)) # linspace to have an almost continuous fit
             df_fit = pd.DataFrame({'x': xx, 'y': sigma_t_fit(xx, *coeff)})
             trace2 = px.line(df_fit, x='x', y='y')
-            fig.add_trace(trace2.data[0], secondary_y=False)
+            fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
             
+            # add title and label
             plot_title = f"Time delta absolute resolution, ref {ref_channel}, channel {channel}"
             xlabel = "Average amplitude A (ADC counts)"
             ylabel = "Absolute time resolution (ps)"
@@ -682,7 +810,7 @@ class Time_Delta(ECAL):
             fig.update_layout(title=plot_title,
                               xaxis=dict(title=xlabel),
                               yaxis=dict(title=ylabel),
-                              updatemenus=[
+                              updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
                                            dict(
                                                buttons = [
                                                            dict(label="Linear",
@@ -698,12 +826,18 @@ class Time_Delta(ECAL):
                                                 )
                                             ]
                              );
-                    
             
             fig.show()
+            # TODO: save the figure
 
 
-    def resolution(self, ref_channel):
-        # TODO: docstring
+    def resolution(self, ref_channel: str=None):
+        """
+        Computes and plots the resolution of all board wrt. a given ref_channel. Points are then
+        fitted with the general function sigma_t_fit()
+        
+        :param ref_channel: reference channel with respect to which the differences are computed
+        """
         for board in self.letters:
             self.__resolution_single_board(board, ref_channel)
+            

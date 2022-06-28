@@ -69,3 +69,8 @@ password: ...
 to copy back:
 scp runDQM.py ecalgit@lxplus.cern.ch: <pwd> /runDQM.py
 password: ...
+
+// Tuesday week 3:
+increment of 2
+start power:
+run number: 
