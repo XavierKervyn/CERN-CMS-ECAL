@@ -446,7 +446,7 @@ class Amplitude(ECAL):
             
 # ----------------------------------------------------------------------------------
 
-    def resolution(self, board):
+    def __resolution_single_board(self, board):
         # TODO: docstring
         # TODO: exception if only 1 run, check board is within the channels in self.letters
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -465,17 +465,48 @@ class Amplitude(ECAL):
                 continue
             guess = [3e-4, 2, 0.04] # TODO: change?
             coeff, covar = curve_fit(sigma_amp_fit, A_lst[:,j], sigma_lst[:,j]/A_lst[:,j], p0=guess)
-
-            plt.figure()
-
-            x = np.linspace(np.min(A_lst[:,j]), np.max(A_lst[:,j]))
-            plt.plot(x, sigma_amp_fit(x, *coeff), label='fit')
-
+            
+            fig = make_subplots(specs=[[{"secondary_y": False}]])
+            
             yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
-            plt.errorbar(A_lst[:,j], sigma_lst[:,j]/A_lst[:,j], xerr=A_err_lst[:,j], yerr=yerror, label="Data")
+            df_data = pd.DataFrame({'x': A_lst[:,j], 'y': sigma_lst[:,j]/A_lst[:,j], "err_x": A_err_lst[:,j], "err_y": yerror})
+            
+            trace1 = px.scatter(data_frame=df_data, x='x', y='y', error_x="err_x", error_y="err_y", color_discrete_sequence=["Crimson"])
+            fig.add_trace(trace1.data[0])
+            
+            x = np.linspace(np.min(A_lst[:,j]), np.max(A_lst[:,j]))
+            df_fit = pd.DataFrame({'x': x, 'y': sigma_amp_fit(x, *coeff)})
+            trace2 = px.line(df_fit, x='x', y='y')
+            fig.add_trace(trace2.data[0], secondary_y=False)
+            
+            plot_title = f"Amplitude relative resolution, channel {channel}"
+            xlabel = "A (ADC count)"
+            ylabel = "Relative amplitude resolution"
+            fig.update_layout(title=plot_title,
+                              xaxis=dict(title=xlabel),
+                              yaxis=dict(title=ylabel))
+            
+            fig.update_layout(updatemenus=[
+                                           dict(
+                                               buttons = [
+                                                           dict(label="Linear",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                           dict(label="Semilog y",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                           dict(label="Loglog",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                         ]
+                                                )
+                                            ]
+                             );
+            
+            fig.show()
 
-            plt.title(f"Amplitude relative resolution, channel {channel}")
-            plt.xlabel("A (ADC count)")
-            plt.ylabel(r"$\frac{\sigma_A}{A}$")
-            plt.legend(loc="best")
-            plt.show()
+
+    def resolution(self):
+        #TODO: docstring
+        for board in self.letters:
+            self.__resolution_single_board(board)
