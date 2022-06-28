@@ -131,7 +131,12 @@ class Time_Delta(ECAL):
                 # Computation with merged data: retrieve the amplitude
                 folder = self.raw_data_folder + str(int(single_run))
                 if variation == 'spill' and plot == True:
-                    h2 = uproot.concatenate({folder + f'/{spill_index}.root': 'digi'}, allow_missing=True)
+                    try:
+                        h2 = uproot.concatenate({folder + f'/{spill_index}.root': 'digi'}, allow_missing=True)
+                    except FileNotFoundError as e:
+                        print(e)
+                        return -1
+                    
                 else: # if variation == 'run'
                     h2 = uproot.concatenate({folder + '/*.root': 'digi'}, allow_missing=True)
 
@@ -153,8 +158,6 @@ class Time_Delta(ECAL):
                 if variation == 'spill':
                     # Computation with merged data: retrieve the spill number
                     if plot:
-                        if spill_index not in spill_pd["spill_nb"]: # raises an exception if the index references a non-existing spill
-                            raise ValueError("There is no spill in the data for the given spill_index")
                         h1 = uproot.concatenate({folder + f'/{spill_index}.root': 'h4'}, allow_missing=True)
                     else:
                         h1 = uproot.concatenate({folder + '/*.root': 'h4'}, allow_missing=True)
