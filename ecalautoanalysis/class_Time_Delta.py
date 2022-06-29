@@ -37,8 +37,8 @@ class Time_Delta(ECAL):
     """
     def __init__(self, included_runs: List[int] = None, letters: str = None,
                  save_folder: str = save_folder_global, raw_data_folder: str = raw_data_folder_global,
-                 plot_save_folder: str = plot_save_folder_global):
-        super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
+                 plot_save_folder: str = plot_save_folder_global, checked: bool=False):
+        super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
 
     
     # ------------------------------------------------------------------------------------------------------------------------------
@@ -202,7 +202,13 @@ class Time_Delta(ECAL):
                                 sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
                                 guess = [np.max(hist), mean_guess, sigma_guess]
-                                coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                                try:
+                                    coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                                except RuntimeError as e:
+                                    print(e)
+                                    print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
+                                    coeff = guess
+                                    covar = np.zeros((3,3))  
                                 mu = coeff[1]
                                 mu_error = np.sqrt(covar[1, 1])
                                 sigma = coeff[2]
@@ -229,7 +235,13 @@ class Time_Delta(ECAL):
                                         
                                     guess += [amp_guess, mean_guess, sigma_guess]
                                 
-                                coeff, covar = curve_fit(multiple_gaussians, bin_centers, hist, p0=guess, maxfev=5000) # fit the curve
+                                    try:
+                                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                                    except RuntimeError as e:
+                                        print(e)
+                                        print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
+                                        coeff = guess
+                                        covar = np.zeros((3,3))  
                                 
                                 for index, k in enumerate(np.arange(-(nb_fits-1)/2, (nb_fits+1)/2)):
                                     amp_list.append(coeff[3*index]) 
@@ -770,7 +782,7 @@ class Time_Delta(ECAL):
         :param ref_channel: reference channel with respect to which the differences are computed
         :param file_title: name of the file with the saved plot
         """
-        a = Amplitude(self.included_runs, self.letters) # create new array if ref_channel not in board
+        a = Amplitude(self.included_runs, self.letters, checked=True) 
         
         # mean amplitude, sigma and associated errors for the chosen board
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -797,23 +809,21 @@ class Time_Delta(ECAL):
         dA2 = A_ref_err_lst[:,int(ref_channel[1])-1]
 
         for j, channel in enumerate([board+number for number in self.numbers]):
-            if j == 0: # TODO: remove, this is because the channel C1 was not working properly
-                continue
             if channel == ref_channel: # ignore the reference channel if it is in the board given
                 continue
             A1 = A_lst[:,j]
             dA1 = A_err_lst[:,j]
             x = A1*A2 / np.sqrt(A1**2 + A2**2)
 
-            guess = [100000, 50] # provide a good first guess to compute the fit
-            coeff, covar = curve_fit(sigma_t_fit, x, sigma_lst[:,j], p0=guess, maxfev=5000) # fit the coefficients to the data
-
-            # create the plotly figure
-            fig = make_subplots(specs=[[{"secondary_y": False}]])
-            
             # define the errorbars
             xerror = x * (dA1/A1 + dA2/A2 + (A1*dA1 + A2*dA2)/(A1**2 + A2**2)) # 'mean' amplitude across channels 
             yerror = sigma_err_lst[:,j]
+
+            guess = [100000, 50] # provide a good first guess to compute the fit
+            coeff, covar = curve_fit(sigma_t_fit, x, sigma_lst[:,j], sigma=yerror, p0=guess, maxfev=5000) # fit the coefficients to the data
+
+            # create the plotly figure
+            fig = make_subplots(specs=[[{"secondary_y": False}]])
             
             df_data = pd.DataFrame({'x': x, 'y': sigma_lst[:,j], "err_x": xerror, "err_y": yerror})
             trace1 = px.scatter(data_frame=df_data, x='x', y='y', 
@@ -858,10 +868,10 @@ class Time_Delta(ECAL):
             Path(plot_save).mkdir(parents=True, exist_ok=True)
             
             path = plot_save
-            fig.write_image(path + file_title + f' channel {channel}' + '.png')
-            fig.write_image(path + file_title + f' channel {channel}' + '.pdf')
-            fig.write_image(path + file_title + f' channel {channel}' + '.svg')
-            fig.write_html(path + file_title + f' channel {channel}' + '.html')
+            fig.write_image(path + file_title + f' ref {ref_channel} channel {channel}' + '.png')
+            fig.write_image(path + file_title + f' ref {ref_channel} channel {channel}' + '.pdf')
+            fig.write_image(path + file_title + f' ref {ref_channel} channel {channel}' + '.svg')
+            fig.write_html(path + file_title + f' ref {ref_channel} channel {channel}' + '.html')
 
 
     def resolution(self, ref_channel: str=None, file_title: str=None):
@@ -877,6 +887,7 @@ class Time_Delta(ECAL):
             if len(self.included_runs) <= 1:
                 raise ValueError("Need at least two runs to plot a resolution")    
             for board in self.letters:
+                print(f'Board {board}')
                 self.__resolution_single_board(board, ref_channel, file_title)
         except ValueError as e:
             print(e)

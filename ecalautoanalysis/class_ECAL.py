@@ -63,10 +63,12 @@ class ECAL:
     :param save_folder: folder where the computed data should be stored
     :param raw_data_folder: folder where the raw experiment data is located
     :param plot_save_folder: folder where the plots are saved
+    :param checked: boolean stating whether included runs have already been checked or not
     """
+    # TODO: change docstring bool check
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None, 
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global, 
-                 plot_save_folder: str=plot_save_folder_global):
+                 plot_save_folder: str=plot_save_folder_global, checked: bool=False):
         self.save_folder = save_folder
         self.raw_data_folder = raw_data_folder
         self.plot_save_folder = plot_save_folder
@@ -77,7 +79,7 @@ class ECAL:
         self.letters = letters
         self.clock_period = 6.238  # nanoseconds
 
-        self.n_bins = 100 # Number of bins in histograms
+        self.n_bins = 50 # Number of bins in histograms
 
         # define channel_names, the access to the 'mesh' with the letters and the numbers
         self.channel_names = []
@@ -86,7 +88,8 @@ class ECAL:
             self.channel_names += channel_names_temp
         
         try: # checks the consistency of the boards and runs
-            self.__check_consistency()
+            if not checked:
+                self.__check_consistency()
         except AssertionError as e:
             print(e)
         except TypeError as e:
@@ -101,6 +104,8 @@ class ECAL:
         Checks if the boards included in all the included_runs are the same, and checks if these boards are consistent with
         self.channel_names. Also checks if included_runs is indeed a list
         """
+        print("Checking consistency of the included runs")
+
         # Check if included_runs is a list
         if type(self.included_runs) != list:
             raise TypeError("included_runs must be a list")
@@ -122,7 +127,7 @@ class ECAL:
 
             # Find the channels all the runs and check consistency with channels_ref
             for single_run in self.included_runs:
-
+                print(f"Checking run {single_run}")
                 folder =  self.raw_data_folder + str(int(single_run))
                 try:
                     h = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)

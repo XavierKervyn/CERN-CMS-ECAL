@@ -36,8 +36,8 @@ class Amplitude(ECAL):
     """
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None,
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global,
-                 plot_save_folder: str=plot_save_folder_global):
-        super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
+                 plot_save_folder: str=plot_save_folder_global, checked: bool=False):
+        super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
         
     # ------------------------------------------------------------------------------------------------------------------------------
     # GENERAL
@@ -121,7 +121,13 @@ class Amplitude(ECAL):
                         guess = [np.max(hist), mean_guess, sigma_guess]
 
                         # fit the histogram with a gaussian, get the statistics
-                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                        try:
+                            coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                        except RuntimeError as e:
+                            print(e)
+                            print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
+                            coeff = guess
+                            covar = np.zeros((3,3))  
                         mu = coeff[1]
                         mu_error = np.sqrt(covar[1,1])
                         sigma = coeff[2]
@@ -182,10 +188,17 @@ class Amplitude(ECAL):
                     mean_guess = np.average(bin_centers, weights=hist) # alternatively: mean_guess = bin_centers[np.argmax(hist)]
                     sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
                     guess = [np.max(hist), mean_guess, sigma_guess]
+                    print("channel", channel)
 
                     # fit the histogram with a gaussian
-                    coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
-                    
+                    try:
+                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                    except RuntimeError as e:
+                        print(e)
+                        print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
+                        coeff = guess
+                        covar = np.zeros((3,3))               
+
                     # get the statistics from the fit, store them in the arrays
                     mu = coeff[1]
                     mu_error = np.sqrt(covar[1,1])
@@ -541,14 +554,16 @@ class Amplitude(ECAL):
             sigma_err_lst[i] = self.get_sigma_err(single_run, board)
 
         for j, channel in enumerate([board+number for number in self.numbers]):
-            if j == 0: # TODO: channel C1 is not working properly
-                continue
-            guess = [3e-4, 2, 0.04] # TODO: change?
-            coeff, covar = curve_fit(sigma_amp_fit, A_lst[:,j], sigma_lst[:,j]/A_lst[:,j], p0=guess)
-            
+
+            yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
+            guess = [1, 2, 0.02] # TODO: change?
+
+            mask = (A_lst[:,j] > 0) & (A_lst[:,j] < 10000) 
+
+            coeff, covar = curve_fit(sigma_amp_fit, A_lst[:,j][mask], sigma_lst[:,j][mask]/A_lst[:,j][mask], p0=guess, sigma=yerror[mask], maxfev=10000)
+            print(f'channel {channel}, coeff', coeff)
             fig = make_subplots(specs=[[{"secondary_y": False}]])
             
-            yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
             df_data = pd.DataFrame({'x': A_lst[:,j], 'y': sigma_lst[:,j]/A_lst[:,j], "err_x": A_err_lst[:,j], "err_y": yerror})
             
             trace1 = px.scatter(data_frame=df_data, x='x', y='y', error_x="err_x", error_y="err_y", color_discrete_sequence=["Crimson"])
@@ -560,7 +575,7 @@ class Amplitude(ECAL):
             fig.add_trace(trace2.data[0], secondary_y=False)
             
             plot_title = f"Amplitude relative resolution, channel {channel}"
-            xlabel = "A (ADC count)"
+            xlabel = "Average amplitude A (ADC count)"
             ylabel = "Relative amplitude resolution"
             fig.update_layout(title=plot_title,
                               xaxis=dict(title=xlabel),
