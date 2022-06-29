@@ -111,7 +111,7 @@ class Amplitude(ECAL):
                     sigma_error_arr = np.zeros(len(self.numbers))
 
                     for i, channel in enumerate(slicing):         
-                        hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = 1500)
+                        hist, bin_edges = np.histogram(aspill_pd_temp[channel], bins = self.n_bins)
 
                         bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
@@ -174,8 +174,7 @@ class Amplitude(ECAL):
                 sigma_error_arr = np.zeros(len(self.numbers))
 
                 for i, channel in enumerate(slicing):
-                    hist, bin_edges = np.histogram(amp_pd[channel], bins = 1500)
-                    #hist, bin_edges, _ = plt.hist(amp_pd[channel], bins = 1500)
+                    hist, bin_edges = np.histogram(amp_pd[channel], bins = self.n_bins)
 
                     bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
@@ -186,7 +185,7 @@ class Amplitude(ECAL):
 
                     # fit the histogram with a gaussian
                     coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
-
+                    
                     # get the statistics from the fit, store them in the arrays
                     mu = coeff[1]
                     mu_error = np.sqrt(covar[1,1])
