@@ -63,7 +63,7 @@ class Time_Delta(ECAL):
         return float(Decimal(value) % Decimal(self.clock_period))
 
     
-    def __compute_time_delta(self, time: pd.DataFrame = None, board: str = None, ref_channel: int = None,
+    def __compute_delta(self, time: pd.DataFrame = None, board: str = None, ref_channel: int = None,
                              apply_synchroniser: bool = True) -> pd.DataFrame:
         """
         Computes the time difference (delta) for a given reference channel versus the channels in the board given as argument.
@@ -181,7 +181,7 @@ class Time_Delta(ECAL):
                             apply_synchroniser = True # the time deltas will be synchronized
                         else:
                             apply_synchroniser = False 
-                        time_delta_pd = self.__compute_time_delta(tspill_pd_temp, board, ref_channel, apply_synchroniser)
+                        time_delta_pd = self.__compute_delta(tspill_pd_temp, board, ref_channel, apply_synchroniser)
 
                         # 'empty' arrays to store the statistics of each channel
                         mu_arr = np.zeros(len(self.numbers))
@@ -287,7 +287,7 @@ class Time_Delta(ECAL):
                         apply_synchroniser = True # the time deltas will be synchronized
                     else:
                         apply_synchroniser = False
-                    time_delta_pd = self.__compute_time_delta(time_pd, board, ref_channel, apply_synchroniser)
+                    time_delta_pd = self.__compute_delta(time_pd, board, ref_channel, apply_synchroniser)
 
                     # 'empty' arrays to store the statistics of each channel
                     mu_arr = np.zeros(len(self.numbers))
