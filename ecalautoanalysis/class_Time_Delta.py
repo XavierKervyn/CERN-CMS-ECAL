@@ -858,10 +858,10 @@ class Time_Delta(ECAL):
             Path(plot_save).mkdir(parents=True, exist_ok=True)
             
             path = plot_save
-            fig.write_image(path + file_title + '.png')
-            fig.write_image(path + file_title + '.pdf')
-            fig.write_image(path + file_title +'.svg')
-            fig.write_html(path + file_title + '.html')
+            fig.write_image(path + file_title + f' channel {channel}' + '.png')
+            fig.write_image(path + file_title + f' channel {channel}' + '.pdf')
+            fig.write_image(path + file_title + f' channel {channel}' + '.svg')
+            fig.write_html(path + file_title + f' channel {channel}' + '.html')
 
 
     def resolution(self, ref_channel: str=None, file_title: str=None):
