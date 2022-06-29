@@ -24,7 +24,7 @@ Child class definition
 
 class Amplitude(ECAL):
     """
-    This class is for the analysis of the amplitudes. 
+    This class serves for the analysis of the amplitude measurements and amplitude resolution of the detector.
     
     With a given list of self.included_runs, one can plot amplitude histograms, variation of the amplitude over runs, colormeshes over the channels, as well as the relative amplitude resolution using the public methods.
     
@@ -133,12 +133,15 @@ class Amplitude(ECAL):
                         sigma_arr[i] = sigma
                         sigma_error_arr[i] = sigma_error
 
-                        if plot: # TODO: add path name to save the plots
-                            title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Spill {spill}'
+                        if plot:
+                            title = f'Run: {run_name}, channel: {board+self.numbers[i]}, spill {spill}'
                             xlabel = 'Amplitude (ADC counts)'
                             ylabel = 'Occurence (a.u.)'
-                            path = ''
-                            super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
+                            
+                            file_title = f'Amplitude channel {board+self.numbers[i]} spill {spill}'
+                            plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
+                            Path(plot_save).mkdir(parents=True, exist_ok=True)
+                            super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
 
                     # gather all the statistics for each spill
                     amp_mean_spill[j,:] = mu_arr
@@ -202,9 +205,10 @@ class Amplitude(ECAL):
                         plot_save = self.plot_save_folder + f'/Run {single_run}'
                         Path(plot_save).mkdir(parents=True, exist_ok=True) # folder created
 
-                        path = plot_save + f'/Run amplitude run {single_run} board {board}'
-                        # TODO: add path to figure to be saved
-                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, path, *coeff)
+                        file_title = f'Amplitude channel {board+self.numbers[i]}'
+                        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
+                        Path(plot_save).mkdir(parents=True, exist_ok=True)
+                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
 
                 # convert the arrays into a single Dataframe
                 run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
@@ -265,7 +269,7 @@ class Amplitude(ECAL):
        
     def get_mean(self, single_run: int=None, board: str=None) -> pd.core.series.Series:
         """
-        Getter method for the mean of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the mean amplitude for each of the channels in the board.
+        Getter method for the mean of the amplitude Gaussian fit for the channels in the board in thelution('test code 280622') single_run. Returns a container with the mean amplitude for each of the channels in the board.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
@@ -354,10 +358,11 @@ class Amplitude(ECAL):
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, board {board}, mean amplitude over spills'
         
-        # TODO: add path to figure to be saved
-        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title)
+        file_title = f'Amplitude board {board}'
+        plot_save = self.plot_save_folder + '/Run ' + str(single_run) + '/variation_spill/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_variation(plot_df, 'spill', xlabel, ylabel, plot_title, plot_save, file_title)
 
-    
     
     def __spill_single_run(self, single_run: int=None):
         """
@@ -379,7 +384,7 @@ class Amplitude(ECAL):
             
     # ------------------------------------------------------------------------------------------------------------------------------
     # RUNS
-    
+
     # ---- HISTOGRAMS ----
     
     def __hist_single_board(self, single_run: int=None, board: str=None, variation: str=None, spill_i: int=None):
@@ -420,11 +425,12 @@ class Amplitude(ECAL):
     
     # ---- VARIATION OVER RUNS ----
     
-    def __run_single_board(self, board: str=None):
+    def __run_single_board(self, board: str=None, file_title: str=None):
         """
         Plots the mean amplitude over each single_run of self.included_runs for every channel in a given board
         
         :param board: board to be analyzed with the run, eg. 'C'
+        :param file_title: name of the figure files to be saved
         """
         # empty matrices to store the statistics     
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -457,21 +463,24 @@ class Amplitude(ECAL):
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Run {single_run}, Board {board}, mean amplitude over runs'
         
-        # TODO: add path to figure to be saved
-        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title)
+        plot_save = self.plot_save_folder + '/run_variation/amplitude/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title)
     
 
-    def run_variation(self):
+    def run_variation(self, file_title: str=None):
         """
         Plots the evolution of the mean amplitude over every single_run in self.included_runs.
         Warning: included_runs must be at least of length two.
+        
+        :param file_title: name of the figure files to be saved
         """
         try:
             if len(self.included_runs)  <= 1:
                 raise ValueError('Need at least two runs to plot a variation')
             else:    
                 for board in self.letters:
-                    self.__run_single_board(board)
+                    self.__run_single_board(board, file_title)
         except ValueError as e:
             print(e)
     
@@ -498,8 +507,10 @@ class Amplitude(ECAL):
 
         plot_title = f'Run {single_run}, mean amplitudes'
         
-        # TODO: add path to figure to be saved
-        super()._ECAL__plot_colormesh(mean, plot_title)
+        file_title = 'Mean Amplitude'
+        plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title)
         
         
     def run_colormesh(self):
@@ -512,13 +523,13 @@ class Amplitude(ECAL):
             
 # ----------------------------------------------------------------------------------
 
-    def __resolution_single_board(self, board: str=None):
+    def __resolution_single_board(self, board: str=None, file_title: str=None):
         """
         Plots for each channel in the board given the relative amplitude resolution as a function of the amplitude.
         
         :param board: board considered
+        :param file_title: name of the figure files to be saved
         """
-        # TODO: add path to figure to be saved
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -573,20 +584,27 @@ class Amplitude(ECAL):
                                             ]
                              );
             
-            # TODO: save figures
+            plot_save = self.plot_save_folder + '/resolution/amplitude/'
+            Path(plot_save).mkdir(parents=True, exist_ok=True)
             
-            fig.show()
+            path = plot_save
+            fig.write_image(path + file_title + f' channel {channel}' + '.png')
+            fig.write_image(path + file_title + f' channel {channel}' + '.pdf')
+            fig.write_image(path + file_title + f' channel {channel}' + '.svg')
+            fig.write_html(path + file_title + f' channel {channel}' + '.html')
 
 
-    def resolution(self):
+    def resolution(self, file_title: str=None):
         """
         Plots for each channels in self.channel_names the relative amplitude resolution as a function of the amplitude.
+        
+        :param file_title: name of the figure files to be saved
         """
         try:
-            if len(self.included_runs)  <= 1:
-                raise ValueError('Need at least two runs to plot resolution')
+            if len(self.included_runs)  <= 2:
+                raise ValueError('Need at least three runs to fit the three parameters for the amplitude resolution')
                 
             for board in self.letters:
-                self.__resolution_single_board(board)
+                self.__resolution_single_board(board, file_title)
         except ValueError as e:
             print(e)

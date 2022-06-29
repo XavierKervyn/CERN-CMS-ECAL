@@ -1,3 +1,5 @@
 .sys*
 *#
 __pycache__*
+Statistics*
+Plots*
