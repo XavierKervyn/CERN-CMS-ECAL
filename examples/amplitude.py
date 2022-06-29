@@ -7,9 +7,23 @@ import numpy as np
 #included_runs = [15680]
 #included_runs = list(np.arange(15728, 15773+1))
 
+included_runs = list(np.arange(15674, 15723+1))
+
+
+included_runs.remove(15676)
+included_runs.remove(15697)
+"""
+included_runs.remove(15711)
+included_runs.remove(15712)
+included_runs.remove(15718)
+"""
+
+#included_runs = [15774]
+
 # list of boards connected
 
-letters = ['A'] 
+letters = ['C']
+#letters = ['B', 'D', 'E'] 
 
 # instances
 
@@ -28,5 +42,5 @@ spill_i_ = 3
 #a.hist()
 #a.run_variation('run 4 boards 29 June 2022')
 #a.run_colormesh()
-a.resolution('run 4 boards 29 June 2022')
+a.resolution('test_fit_bins')
 

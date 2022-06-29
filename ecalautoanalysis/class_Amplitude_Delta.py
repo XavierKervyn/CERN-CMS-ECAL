@@ -149,7 +149,7 @@ class Amplitude_Delta(ECAL):
                             if channel == ref_channel:
                                 continue
 
-                            hist, bin_edges = np.histogram(amp_delta_pd[channel], bins = 1500)
+                            hist, bin_edges = np.histogram(amp_delta_pd[channel], bins = self.n_bins)
 
                             bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
 
@@ -217,7 +217,7 @@ class Amplitude_Delta(ECAL):
                         if channel == ref_channel:
                             continue
 
-                        hist, bin_edges = np.histogram(amp_delta_pd[channel], bins = 1500)
+                        hist, bin_edges = np.histogram(amp_delta_pd[channel], bins = self.n_bins)
 
                         bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 

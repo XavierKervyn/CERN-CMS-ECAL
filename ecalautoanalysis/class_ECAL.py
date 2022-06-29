@@ -77,6 +77,8 @@ class ECAL:
         self.letters = letters
         self.clock_period = 6.238  # nanoseconds
 
+        self.n_bins = 100 # Number of bins in histograms
+
         # define channel_names, the access to the 'mesh' with the letters and the numbers
         self.channel_names = []
         for letter in self.letters:
@@ -151,7 +153,7 @@ class ECAL:
         :param file_title: title of the file (figure) saved
         :param *coeff: pointer to the coefficients computed with the (multiple) gaussian(s) fit
         """
-        trace1 = px.histogram(df, x=channel, nbins=3000)
+        trace1 = px.histogram(df, x=channel, nbins=2*self.n_bins)
         fig = make_subplots(specs=[[{"secondary_y": False}]])
         fig.add_trace(trace1.data[0]) # plot the DataFrame
         
