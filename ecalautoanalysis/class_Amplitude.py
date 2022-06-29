@@ -574,6 +574,8 @@ class Amplitude(ECAL):
             trace2 = px.line(df_fit, x='x', y='y')
             fig.add_trace(trace2.data[0], secondary_y=False)
             
+            fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)}, s={round(coeff[1],2)}, c={round(coeff[2],2)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
+
             plot_title = f"Amplitude relative resolution, channel {channel}"
             xlabel = "Average amplitude A (ADC count)"
             ylabel = "Relative amplitude resolution"
