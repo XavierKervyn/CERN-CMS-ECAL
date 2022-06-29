@@ -24,7 +24,7 @@ Child class definition
 
 class Amplitude(ECAL):
     """
-    This class is for the analysis of the amplitudes. 
+    This class serves for the analysis of the amplitude measurements and amplitude resolution of the detector.
     
     With a given list of self.included_runs, one can plot amplitude histograms, variation of the amplitude over runs, colormeshes over the channels, as well as the relative amplitude resolution using the public methods.
     
@@ -430,6 +430,7 @@ class Amplitude(ECAL):
         Plots the mean amplitude over each single_run of self.included_runs for every channel in a given board
         
         :param board: board to be analyzed with the run, eg. 'C'
+        :param file_title: name of the figure files to be saved
         """
         # empty matrices to store the statistics     
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -471,6 +472,8 @@ class Amplitude(ECAL):
         """
         Plots the evolution of the mean amplitude over every single_run in self.included_runs.
         Warning: included_runs must be at least of length two.
+        
+        :param file_title: name of the figure files to be saved
         """
         try:
             if len(self.included_runs)  <= 1:
@@ -525,8 +528,8 @@ class Amplitude(ECAL):
         Plots for each channel in the board given the relative amplitude resolution as a function of the amplitude.
         
         :param board: board considered
+        :param file_title: name of the figure files to be saved
         """
-        # TODO: add path to figure to be saved
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -594,6 +597,8 @@ class Amplitude(ECAL):
     def resolution(self, file_title: str=None):
         """
         Plots for each channels in self.channel_names the relative amplitude resolution as a function of the amplitude.
+        
+        :param file_title: name of the figure files to be saved
         """
         try:
             if len(self.included_runs)  <= 1:

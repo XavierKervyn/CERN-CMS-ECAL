@@ -82,7 +82,6 @@ class Amplitude_Delta(ECAL):
         :param variation: ('run' or 'spill') computing the statistics per run or spill
         :param plot: boolean. If True, the histogram of the data is plotted.
         """
-        # TODO: add path to figure to be saved
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
@@ -346,7 +345,6 @@ class Amplitude_Delta(ECAL):
         :param board: board to be analyzed with the run, eg. 'C'
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         """
-        # TODO: add path to figure to be saved
         # load the Dataframes
         mean, mean_err, sigma, sigma_err = self.__load_stats(single_run, board, ref_channel, 'spill')
         num_spills = mean.shape[0] # number of spills in the single run
@@ -473,8 +471,8 @@ class Amplitude_Delta(ECAL):
         
         :param board: board to be analyzed with the run, eg. 'C'
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
+        :param file_title: name of the figure files to be saved
         """
-        # TODO: update docstring with file_title
         # load the Dataframes     
         mean = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -516,6 +514,7 @@ class Amplitude_Delta(ECAL):
         
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         :param all_channels: plotting either for all channels self.channel_names or only for those in the board to which ref_channel belongs
+        :param file_title: name of the figure files to be saved
         """
         try: # must have at least two runs included to plot a variation over runs
             if len(self.included_runs) <= 1:
@@ -539,6 +538,7 @@ class Amplitude_Delta(ECAL):
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
+        :param file_title: name of the figure files to be saved
         """
         stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
         folder =  self.raw_data_folder + str(int(single_run))
@@ -565,7 +565,7 @@ class Amplitude_Delta(ECAL):
         Plots the colormesh map with the mean amplitude over self.channel_names for every single_run in self.included_runs.
         
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
+        :param file_title: name of the figure files to be saved
         """
-        # TODO: add path to figure to be saved
         for single_run in self.included_runs:
             self.__run_colormesh_single_run(single_run, ref_channel, file_title)
