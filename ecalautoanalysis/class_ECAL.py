@@ -39,9 +39,9 @@ def multiple_gaussians(x: float=None, *p: tuple) -> float:
     
     :param x: point at which the function is evaluated
     :param p: parameters of the gaussians; [amplitude1, mean1, std deviation1, amplitude2, mean2, ...]
+    
     :return: sum of gaussians evaluated at the point x
     """
-    
     n_fit = int(len(p)/3) # find the number of gaussians
     res = 0
     for i in range(n_fit):
@@ -106,9 +106,9 @@ class ECAL:
         # define the channels of the first run as channels_ref
         single_run = self.included_runs[0]
         folder =  self.raw_data_folder + str(int(single_run))
-        try:
+        try: 
             h = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
-        except FileNotFoundError as e:
+        except FileNotFoundError as e: # if the file does not exist, we raise an exception
             print(e)
         else:
             columns_ref = ak.to_pandas(h).columns
@@ -124,7 +124,7 @@ class ECAL:
                 folder =  self.raw_data_folder + str(int(single_run))
                 try:
                     h = uproot.concatenate({folder+'/*.root' : 'digi'}, allow_missing = True)
-                except FileNotFoundError as e:
+                except FileNotFoundError as e: # if the file does not exist, we raise an exception
                     print(e)
                 else:
                     columns = ak.to_pandas(h).columns
@@ -139,7 +139,7 @@ class ECAL:
         """
         Plots the histohram of the DataFrame df for a single channel and with the bin_centers given. Title and labels are 
         also included in the arguments, as well as the path to save the figure and a tuple with the coefficients for the 
-        (multiple) gaussian(s) fit of the data.
+        (multiple) gaussian(s) fit of the data. The name of the saved file is file_title.
         
         :param df: DataFrame containing the data to be plotted
         :param channel: the channel we want to study
@@ -148,6 +148,7 @@ class ECAL:
         :param xlabel: label of the x-axis
         :param ylabel: label of the y-axis
         :param path: path to save the figure
+        :param file_title: title of the file (figure) saved
         :param *coeff: pointer to the coefficients computed with the (multiple) gaussian(s) fit
         """
         trace1 = px.histogram(df, x=channel, nbins=3000)
@@ -170,7 +171,8 @@ class ECAL:
         fig.update_layout(title=hist_title,
                          xaxis_title=xlabel,
                          yaxis_title=ylabel)
-
+        
+        # save the figure
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
@@ -181,13 +183,15 @@ class ECAL:
                          xlabel: str=None, ylabel: str=None, plot_title: str=None, path: str=None, file_title: str=None):
         """
         Plots the variation either over runs or spills of the DataFrame. Title and labels of the axes are included 
-        as arguments.
+        as arguments, as well as the path to the saving folder and the title of the file.
         
         :param df: DataFrame containing the data to be plotted
         :param variation: either 'run' (histograms are computed over a full run) or 'spill' (separately for each spill in single_run).
         :param xlabel: label of the x-axis
         :param ylabel: label of the y-axis
         :param plot_title: title of the figure
+        :param path: path to the folder where the plot is saved
+        :param file_title: title of the file (figure) saved
         """
         fig = make_subplots(specs=[[{"secondary_y": False}]])
         fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
@@ -201,7 +205,8 @@ class ECAL:
         else:
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), 
                                           ticktext=[str(run) for run in self.included_runs]))
-
+        
+        # save the figure
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
@@ -210,10 +215,12 @@ class ECAL:
     def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None):
         """
         Plots a 2D colormesh map of the mean of a given quantity (amplitude, amplitude difference, time difference) over all channels
-        and boards.
+        and boards. 
         
         :param mean: array containing all the data
         :param plot_title: title of the figure
+        :param path: path to the folder where the plot is saved
+        :param file_title: title of the file (figure) saved
         """
         mean_df = pd.DataFrame(mean)
         mean_df.columns = self.letters
@@ -228,7 +235,7 @@ class ECAL:
 
         fig.update_layout(title=plot_title)
         
-
+        # save the figure
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title + '.svg')
