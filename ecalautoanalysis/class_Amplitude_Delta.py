@@ -18,8 +18,8 @@ class Amplitude_Delta(ECAL):
     """
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None,
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global,
-                 plot_save_folder: str=plot_save_folder_global):
-         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder)
+                 plot_save_folder: str=plot_save_folder_global, checked: bool=False):
+         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
     
     
     # ------------------------------------------------------------------------------------------------------------------------------
@@ -144,7 +144,13 @@ class Amplitude_Delta(ECAL):
                             sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
 
                             guess = [np.max(hist), mean_guess, sigma_guess]
-                            coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                            try:
+                                coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                            except RuntimeError as e:
+                                print(e)
+                                print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
+                                coeff = guess
+                                covar = np.zeros((3,3))  
                             mu = coeff[1]
                             mu_error = np.sqrt(covar[1,1])
                             sigma = coeff[2]
@@ -212,7 +218,13 @@ class Amplitude_Delta(ECAL):
                         sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
 
                         guess = [np.max(hist), mean_guess, sigma_guess]
-                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000)
+                        try:
+                            coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                        except RuntimeError as e:
+                            print(e)
+                            print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
+                            coeff = guess
+                            covar = np.zeros((3,3))  
                         mu = coeff[1]
                         mu_error = np.sqrt(covar[1,1])
                         sigma = coeff[2]
