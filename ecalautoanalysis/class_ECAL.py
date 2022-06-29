@@ -159,8 +159,8 @@ class ECAL:
             d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
 
             amp, mean, sigma = coeff
-            fig.add_vline(x=mean, line_dash='dash', line_color='red')
-            fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
+            fig.add_vline(x=mean, line_dash='dash', line_color='red', annotation_text=f'mean: {round(mean,2)}', annotation_position="top left")
+            fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2, annotation_text=f'sigma: {round(sigma,2)}', annotation_position="outside bottom right")
         else: # if we have more than 3 parameters in coeff, then it means that we work with multiple gaussians
             d = {'x': bin_centers, 'y': multiple_gaussians(bin_centers, *coeff)}
             
