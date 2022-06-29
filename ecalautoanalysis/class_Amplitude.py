@@ -601,8 +601,8 @@ class Amplitude(ECAL):
         :param file_title: name of the figure files to be saved
         """
         try:
-            if len(self.included_runs)  <= 1:
-                raise ValueError('Need at least two runs to plot resolution')
+            if len(self.included_runs)  <= 2:
+                raise ValueError('Need at least three runs to fit the three parameters for the amplitude resolution')
                 
             for board in self.letters:
                 self.__resolution_single_board(board, file_title)
