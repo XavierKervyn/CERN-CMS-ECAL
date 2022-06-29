@@ -25,7 +25,7 @@ letters = ['B', 'D', 'E']
 
 # instances
 
-t = Time_Delta(included_runs, letters)
+t = Time_Delta(included_runs, letters, checked=True)
 
 # extra arguments
 

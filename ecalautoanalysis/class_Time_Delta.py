@@ -837,7 +837,7 @@ class Time_Delta(ECAL):
             trace2 = px.line(df_fit, x='x', y='y')
             fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
             
-            fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)}, c={round(coeff[1],2)}', xref='x domain', yref='y domain', x=1, y=1)
+            fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)}, c={round(coeff[1],2)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
 
             # add title and label
             plot_title = f"Time delta absolute resolution, ref {ref_channel}, channel {channel}"
