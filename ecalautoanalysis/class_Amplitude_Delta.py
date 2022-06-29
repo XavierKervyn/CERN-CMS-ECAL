@@ -25,20 +25,6 @@ class Amplitude_Delta(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # GENERAL
     
-    def __to_channel_converter(self, channel_number: int=None) -> str:
-        """ 
-        Converts the channel number to the appropriate Channel. For example 7 -> 'B3'. 
-        
-        :param channel_number: index of the channel in self.channel_names
-        :return: channel in string format, eg 'B3'
-        """
-        board_counter = 0
-        while channel_number > 4:
-            board_counter += 1
-            channel_number -= 5
-        return f'{self.letters[board_counter]}{self.numbers[channel_number]}'
-
-    
     def __compute_delta(self, amp: pd.DataFrame=None, board: str=None, ref_channel: str=None) -> pd.DataFrame:
         """ 
         Computes the amplitude difference (delta) for all channels in a board, wrt. a given reference channel. 
@@ -319,19 +305,6 @@ class Amplitude_Delta(ECAL):
         except:
             raise Exception('Could not load nor generate .csv file')
             
-            
-    def get_mean(self, single_run: int=None, board: str=None, ref_channel: str=None) -> pd.core.series.Series:
-        """
-        Getter method for the mean of the amplitude delta Gaussian fit for the channels in the board with respect to the ref_channel in the single_run. Returns a container with the mean amplitude deltas for each of the channels in the board.
-        
-        :param single_run: number associated with the run to be analyzed, eg. 15610
-        :param board: board to be analyzed with the run, eg. 'C'
-        :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
-        
-        :return: pandas.core.series.Series containing the mean of the amplitude delta for each of the channels in the board with respect to the ref_channel
-        """
-        df = self.__load_stats(single_run, board, ref_channel, variation='run')
-        return df["mu"]
             
     # ------------------------------------------------------------------------------------------------------------------------------
     # SPILLS
