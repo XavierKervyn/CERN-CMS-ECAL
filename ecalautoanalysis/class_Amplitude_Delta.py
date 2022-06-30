@@ -20,6 +20,8 @@ class Amplitude_Delta(ECAL):
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global,
                  plot_save_folder: str=plot_save_folder_global, checked: bool=False):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
+        
+        # class attribute
         self.n_bins = 50
     
     
@@ -486,7 +488,7 @@ class Amplitude_Delta(ECAL):
         
         xlabel = 'Run'
         ylabel = 'Amplitude delta (ADC counts)'
-        plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean amplitude delta over runs'
+        plot_title = f'Board {board}, ref {ref_channel}, mean amplitude delta over runs'
         
         plot_save = self.plot_save_folder + '/run_variation/amplitude_delta/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
