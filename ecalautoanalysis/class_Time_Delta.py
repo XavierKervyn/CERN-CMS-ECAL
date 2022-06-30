@@ -121,7 +121,7 @@ class Time_Delta(ECAL):
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
         print(f'Generating .csv, board {board}')
-        fit_option = 'gaussians' # TODO: remove
+        # fit_option = 'gaussians' # TODO: remove
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
