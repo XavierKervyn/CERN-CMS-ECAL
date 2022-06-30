@@ -120,7 +120,6 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-        print(f'Generating .csv, board {board}')
         # fit_option = 'gaussians' # TODO: remove
         try:
             if ref_channel not in self.channel_names:
@@ -389,7 +388,7 @@ class Time_Delta(ECAL):
                                    + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
         
         except FileNotFoundError: # generating the statistics file
-            print('File not found')
+            print('File not found, generating .csv')
             self.__generate_stats(single_run, board, ref_channel, variation, plot=False, fit_option=fit_option)  
 
             # loading the file and returning it
@@ -656,7 +655,7 @@ class Time_Delta(ECAL):
 
         xlabel = 'Run'
         ylabel = 'Time delta (ps)'
-        plot_title = f'Run {single_run}, board {board}, ref {ref_channel}, mean time delta over runs'
+        plot_title = f'Board {board}, ref {ref_channel}, mean time delta over runs'
         
         # save the plot with the file_title specified by the user
         plot_save = self.plot_save_folder + '/run_variation/time_delta/'
