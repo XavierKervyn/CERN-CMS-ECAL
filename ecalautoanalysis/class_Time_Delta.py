@@ -40,6 +40,7 @@ class Time_Delta(ECAL):
                  plot_save_folder: str = plot_save_folder_global, checked: bool=False):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
         self.n_bins = 1000
+        #self.mask_lst = [-1] * len(self.included_runs)
 
     
     # ------------------------------------------------------------------------------------------------------------------------------
@@ -54,12 +55,12 @@ class Time_Delta(ECAL):
         :return: synchronised value
         """
         # How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5
-        window_leniency = 0.5  
+        window_leniency = 0.5
         if value > 0:
             while value > self.clock_period * window_leniency:
                 value -= self.clock_period
         else:
-            while value < (-self.clock_period * window_leniency):
+            while value < (-self.clock_period * window_leniency):             
                 value += self.clock_period
         return float(Decimal(value) % Decimal(self.clock_period))
 
@@ -79,24 +80,23 @@ class Time_Delta(ECAL):
         time_pd = time  # Rename the column names with the channels in self._channel_names
         n_numbers = len(self.numbers)
 
-        time_delta_pd = pd.DataFrame()
+        #time_delta_pd = pd.DataFrame()
 
         slicing = [channel for channel in self.channel_names if channel[0] == board]
-        for i, channel in enumerate(slicing):
-            if channel == ref_channel:
-                continue
 
-            reference_time = time_pd[ref_channel]
-            curr_time = time_pd[channel]
-            time_delta = curr_time - reference_time
+        reference_time = time_pd[ref_channel]
+        time_delta_pd = time_pd.sub(reference_time, axis='rows')[slicing]
 
-            # Remove period shift from the data
-            if apply_synchroniser:
-                time_delta = time_delta.apply(self.__synchroniser)
+        # Masking bad events
+        for k, channel in enumerate(slicing):
+            time_delta_pd = time_delta_pd[(np.abs(time_delta_pd[channel])<= 1000*self.clock_period)]
 
-            time_delta = time_delta.multiply(1000)  # convert into picoseconds
-            time_delta_pd[f'{channel}'] = time_delta # Save time deltas for later analysis
-            
+        # Remove period shift from the data
+        if apply_synchroniser:
+            for k, channel in enumerate(slicing):
+                time_delta_pd[channel] = time_delta_pd[channel].apply(self.__synchroniser)
+        time_delta_pd = time_delta_pd.multiply(1000)  # convert into picoseconds
+
         return time_delta_pd
 
     
@@ -150,8 +150,10 @@ class Time_Delta(ECAL):
 
                 ref_idx = h2[ref_channel][0]
                 time = h2['time_max']
+                #time = h2['time'] #TODO: check
+                
                 time_pd = pd.DataFrame(time, columns=self.channel_names)
-
+                
                 # column header for the Dataframes
                 col_list = len(self.numbers) * [board]
                 col_list = [x + y for x, y in zip(col_list, self.numbers)]
@@ -275,6 +277,7 @@ class Time_Delta(ECAL):
                 else:  # variation=='run':
                     if fit_option == 'synchronise':
                         apply_synchroniser = True # the time deltas will be synchronized
+
                     else:
                         apply_synchroniser = False
                     time_delta_pd = self.__compute_delta(time_pd, board, ref_channel, apply_synchroniser)
@@ -737,7 +740,7 @@ class Time_Delta(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # RESOLUTION
 
-    def __resolution_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None, fit_option: str=None):
+    def __resolution_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None):
         """
         Computes and plots the resolution of all the channels in a given board wrt. a given ref_channel. Points are then
         fitted with the general function sigma_t_fit(). The user must provide a file_title for the plot, related to the 
@@ -747,16 +750,14 @@ class Time_Delta(ECAL):
         :param ref_channel: reference channel with respect to which the differences are computed
         :param file_title: name of the file with the saved plot
         """
-        # TODO: update docstring fit_option
-        # TODO: finish fit_optoin implementation in time, amplitude, amplitude delta and change files names accordingly
         a = Amplitude(self.included_runs, self.letters, checked=True) 
-        
+
         # mean amplitude, sigma and associated errors for the chosen board
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
-        
+
         # mean amplitude and associated error for the board containing the reference channel
         A_ref_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         A_ref_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
@@ -803,8 +804,13 @@ class Time_Delta(ECAL):
             df_fit = pd.DataFrame({'x': xx, 'y': sigma_t_fit(xx, *coeff)})
             trace2 = px.line(df_fit, x='x', y='y')
             fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
+
+            r = sigma_lst[:,j] - sigma_t_fit(x, *coeff)
+            chisq = np.sum((r/yerror)**2)
             
             fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)}, c={round(coeff[1],2)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
+
+            fig.add_annotation(text=f'Chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.5, y=0.7, showarrow=False)
 
             # add title and label
             plot_title = f"Time delta absolute resolution, ref {ref_channel}, channel {channel}"
@@ -841,7 +847,7 @@ class Time_Delta(ECAL):
             fig.write_html(path + file_title + f' ref {ref_channel} channel {channel}' + '.html')
 
 
-    def resolution(self, ref_channel: str=None, file_title: str=None, fit_option: str=None):
+    def resolution(self, ref_channel: str=None, file_title: str=None):
         """
         Computes and plots the resolution of all board wrt. a given ref_channel. Points are then
         fitted with the general function sigma_t_fit(). The user must provide a file_title for the plot, related to the 
@@ -850,13 +856,12 @@ class Time_Delta(ECAL):
         :param ref_channel: reference channel with respect to which the differences are computed
         :param file_title: name of the file with the saved plot
         """
-        # TODO: update docstring fit_option
         try:
             if len(self.included_runs) <= 1:
                 raise ValueError("Need at least two runs to plot a resolution")    
             for board in self.letters:
                 print(f'Board {board}')
-                self.__resolution_single_board(board, ref_channel, file_title, fit_option)
+                self.__resolution_single_board(board, ref_channel, file_title)
         except ValueError as e:
             print(e)
             
