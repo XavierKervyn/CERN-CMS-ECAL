@@ -33,6 +33,7 @@ class Amplitude(ECAL):
     :param save_folder: local path to the folder where files will be saved
     :param raw_data_folder: local path to the folder where the data from DQM is sent
     :param plot_save_folder: local path to the folder where the plots can be saved
+    :param n_bins: number of bins in the ampitude histograms
     """
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None,
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global,
@@ -210,7 +211,7 @@ class Amplitude(ECAL):
                     sigma_arr[i] = sigma
                     sigma_error_arr[i] = sigma_error
 
-                    if plot:
+                    if plot: # Generate the plot
                         title = f'Run: {run_name}, Channel: {board+self.numbers[i]}'
                         xlabel = 'Amplitude (ADC counts)'
                         ylabel = 'Occurence (a.u.)'
@@ -470,11 +471,12 @@ class Amplitude(ECAL):
         mean_stacked = mean.flatten()
         sigma_stacked = sigma.flatten()
         
+        # Generating the plot
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
         
         xlabel = 'Run'
         ylabel = 'Amplitude (ADC counts)'
-        plot_title = f'Run {single_run}, Board {board}, mean amplitude over runs'
+        plot_title = f'Board {board}, mean amplitude over runs'
         
         plot_save = self.plot_save_folder + '/run_variation/amplitude/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
@@ -488,7 +490,7 @@ class Amplitude(ECAL):
         
         :param file_title: name of the figure files to be saved
         """
-        try:
+        try: # Checking if enough runs to plot a variation
             if len(self.included_runs)  <= 1:
                 raise ValueError('Need at least two runs to plot a variation')
             else:    
@@ -506,20 +508,22 @@ class Amplitude(ECAL):
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         """
-        stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
+        #stat_names = ['Mu', 'Mu error', 'Sigma', 'Sigma_error']
+        # Making directory for csv files
         folder =  self.raw_data_folder + str(int(single_run))
         run_name = os.path.basename(os.path.normpath(folder))
         print('Run: ', run_name)
         run_save = self.save_folder + '/Run ' + str(run_name) + '/'
         Path(run_save).mkdir(parents=True, exist_ok=True)
 
+        # Loading mean from csv files or generating it if necessary
         mean = np.zeros((len(self.numbers), len(self.letters)))
         for i, board in enumerate(self.letters):
             run_amp_df = self.__load_stats(single_run, board, 'run')
             mean[:,i] = np.array(list(reversed(run_amp_df["mu"])))
 
+        # Generating the plot
         plot_title = f'Run {single_run}, mean amplitudes'
-        
         file_title = 'Mean Amplitude'
         plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
@@ -543,38 +547,45 @@ class Amplitude(ECAL):
         :param board: board considered
         :param file_title: name of the figure files to be saved
         """
+        # Arrays with the stats for all included runs and channels in the board
         A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         sigma_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
         
+        # Filling the arrays
         for i, single_run in enumerate(self.included_runs):
             A_lst[i] = self.get_mean(single_run, board)
             sigma_lst[i] = self.get_sigma(single_run, board)
             A_err_lst[i] = self.get_mean_err(single_run, board)
             sigma_err_lst[i] = self.get_sigma_err(single_run, board)
-
+            
+        # Plot the resolution for all channels
         for j, channel in enumerate([board+number for number in self.numbers]):
 
             yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
             guess = [1, 2, 0.02] # TODO: change?
 
+            # Mask for the plot because data doesn't fit the model for high amplitudes
             mask = (A_lst[:,j] > 0) & (A_lst[:,j] < 10000) 
 
             coeff, covar = curve_fit(sigma_amp_fit, A_lst[:,j][mask], sigma_lst[:,j][mask]/A_lst[:,j][mask], p0=guess, sigma=yerror[mask], maxfev=10000)
             print(f'channel {channel}, coeff', coeff)
+            
             fig = make_subplots(specs=[[{"secondary_y": False}]])
             
+            # Plotting the data with errorbars
             df_data = pd.DataFrame({'x': A_lst[:,j], 'y': sigma_lst[:,j]/A_lst[:,j], "err_x": A_err_lst[:,j], "err_y": yerror})
-            
             trace1 = px.scatter(data_frame=df_data, x='x', y='y', error_x="err_x", error_y="err_y", color_discrete_sequence=["Crimson"])
             fig.add_trace(trace1.data[0])
             
+            # Plotting the fit
             x = np.linspace(np.min(A_lst[:,j]), np.max(A_lst[:,j]))
             df_fit = pd.DataFrame({'x': x, 'y': sigma_amp_fit(x, *coeff)})
             trace2 = px.line(df_fit, x='x', y='y')
             fig.add_trace(trace2.data[0], secondary_y=False)
             
+            # Printing the coefficients in the fit
             fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)}, s={round(coeff[1],2)}, c={round(coeff[2],2)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
 
             plot_title = f"Amplitude relative resolution, channel {channel}"
@@ -583,7 +594,7 @@ class Amplitude(ECAL):
             fig.update_layout(title=plot_title,
                               xaxis=dict(title=xlabel),
                               yaxis=dict(title=ylabel))
-            
+            # Creating a menu to choose between linear, semilogy and loglog
             fig.update_layout(updatemenus=[
                                            dict(
                                                buttons = [
@@ -600,7 +611,7 @@ class Amplitude(ECAL):
                                                 )
                                             ]
                              );
-            
+            # Saving the figures
             plot_save = self.plot_save_folder + '/resolution/amplitude/'
             Path(plot_save).mkdir(parents=True, exist_ok=True)
             
@@ -617,7 +628,7 @@ class Amplitude(ECAL):
         
         :param file_title: name of the figure files to be saved
         """
-        try:
+        try: # Checking if there are enough runs for the resolutin fit
             if len(self.included_runs)  <= 2:
                 raise ValueError('Need at least three runs to fit the three parameters for the amplitude resolution')
                 

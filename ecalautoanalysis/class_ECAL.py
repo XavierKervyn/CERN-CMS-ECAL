@@ -124,13 +124,14 @@ class ECAL:
 
     def __three_gaussians(self, x: float=None, *p: tuple) -> float:
         """
-        Returns a sum of three gaussians with parameters given by *p, evaluated at the point x
+        Returns a sum of three gaussians with the same std deviation, and with means separated by one clock period, with parameters given by *p, evaluated at the point x
         
         :param x: point at which the function is evaluated
         :param p: parameters of the gaussians; [amplitude1, mean1, std deviation1, amplitude2, amplitude3]
         
         :return: sum of three gaussians evaluated at the point x, with period self.clock_period
         """
+
         A1, mu1, sigma1, A2, A3 = p # get the coefficients
         coeff1 = (A1, mu1, sigma1)
         coeff2 = (A2, mu1+self.clock_period*1000, sigma1)
@@ -156,6 +157,7 @@ class ECAL:
         :param file_title: title of the file (figure) saved
         :param *coeff: pointer to the coefficients computed with the (multiple) gaussian(s) fit
         """
+        # Plotting the data
         trace1 = px.histogram(df, x=channel, nbins=2*self.n_bins)
         fig = make_subplots(specs=[[{"secondary_y": False}]])
         fig.add_trace(trace1.data[0]) # plot the DataFrame
@@ -166,9 +168,10 @@ class ECAL:
             amp, mean, sigma = coeff
             fig.add_vline(x=mean, line_dash='dash', line_color='red', annotation_text=f'mean: {round(mean,2)}', annotation_position="top left")
             fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2, annotation_text=f'sigma: {round(sigma,2)}', annotation_position="outside bottom right")
-        else: # if we have more than 3 parameters in coeff, then it means that we work with multiple gaussians
+        else: # if we have more than 3 parameters in coeff, then it means that we work with three gaussians
             d = {'x': bin_centers, 'y': self.__three_gaussians(bin_centers, *coeff)}
-            
+        
+        # Ploting the fit
         fit_pd = pd.DataFrame(data=d)
         trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=['red'])
         fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
@@ -177,7 +180,7 @@ class ECAL:
                          xaxis_title=xlabel,
                          yaxis_title=ylabel)
         
-        # save the figure
+        # Save the figures
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
@@ -205,13 +208,14 @@ class ECAL:
                          xaxis_title=xlabel,
                          yaxis_title=ylabel)
 
+        # Change ticks of x-axis depending on variation
         if variation == 'spill':
             fig.update_layout(xaxis= dict(tickmode='linear', tick0=1, dtick=1))
         else:
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), 
                                           ticktext=[str(run) for run in self.included_runs]))
         
-        # save the figure
+        # Save the figures
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
@@ -228,11 +232,13 @@ class ECAL:
         :param path: path to the folder where the plot is saved
         :param file_title: title of the file (figure) saved
         """
+        # Formatting DataFrame for the plot
         mean_df = pd.DataFrame(mean)
         mean_df.columns = self.letters
         indices = list(reversed(self.numbers))
         mean_df.index = indices
         
+        # Plotting the colormesh
         fig = px.imshow(mean_df,
                         labels=dict(x="Board", y="Channel"),
                         x=self.letters,
@@ -241,7 +247,7 @@ class ECAL:
 
         fig.update_layout(title=plot_title)
         
-        # save the figure
+        # Save the figures
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title + '.svg')
