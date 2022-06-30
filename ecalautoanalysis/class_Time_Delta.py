@@ -39,6 +39,7 @@ class Time_Delta(ECAL):
                  save_folder: str = save_folder_global, raw_data_folder: str = raw_data_folder_global,
                  plot_save_folder: str = plot_save_folder_global, checked: bool=False):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
+        self.n_bins = 1000
 
     
     # ------------------------------------------------------------------------------------------------------------------------------
@@ -119,7 +120,6 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-        # TODO: add path to figure to be saved
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
@@ -215,29 +215,23 @@ class Time_Delta(ECAL):
                                 sigma_error = np.sqrt(covar[2, 2])
                             else:          
                                 # fitting process with multiple gaussians
-                                guess = []
-                                amp_list = []
-                                mu_list = []
-                                sigma_list = []
-                                mu_error_list = []
-                                sigma_error_list = []
-                                
+                                amp_guess = np.max(hist)
                                 mean_guess = np.average(bin_centers, weights=hist)
                                 sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
-                                guess = [amp_guess, mean_guess, sigma_guess, amp_guess/2, sigma_guess, amp_guess/2, sigma_guess]
+                                guess = [amp_guess, mean_guess, sigma_guess, amp_guess/2, amp_guess/2]
                                 try:
-                                    coeff, covar = curve_fit(three_gaussians, bin_centers, hist, p0=guess, maxfev=5000)
+                                    coeff, covar = curve_fit(super()._ECAL__three_gaussians, bin_centers, hist, p0=guess, maxfev=5000)
                                 except RuntimeError as e:
                                     print(e)
                                     print(f"Fit with three gaussians unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")
                                     coeff = guess
-                                    covar = np.zeros((7,7))  
+                                    covar = np.zeros((5,5))  
                                 # TODO: delete all nb_fits in docstrings
                                 mu = coeff[1]
-                                sigma = np.average(np.array(coeff[2] + coeff[4] + coeff[6]))
+                                sigma = coeff[2]
                                 mu_error = np.sqrt(covar[1,1])
-                                sigma_error = np.sqrt(covar[2,2] + covar[4,4] + covar[6,6])
+                                sigma_error = np.sqrt(covar[2,2])
 
                             mu_arr[i] = mu
                             mu_error_arr[i] = mu_error
@@ -316,29 +310,23 @@ class Time_Delta(ECAL):
                             sigma_error = np.sqrt(covar[2, 2])
                         else:
                             # fitting process with multiple gaussians
-                            amp_list = []
-                            mu_list = []
-                            sigma_list = []
-                            mu_error_list = []
-                            sigma_error_list = []
-
+                            amp_guess = np.max(hist)
                             mean_guess = np.average(bin_centers, weights=hist)
                             sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
-                            guess = [amp_guess, mean_guess, sigma_guess, amp_guess/2, sigma_guess, amp_guess/2, sigma_guess]
-
+                            guess = (amp_guess, mean_guess, sigma_guess, amp_guess/2, amp_guess/2)
                             try:
-                                coeff, covar = curve_fit(three_gaussians, bin_centers, hist, p0=guess, maxfev=5000)
+                                coeff, covar = curve_fit(f=super()._ECAL__three_gaussians, xdata=bin_centers, ydata=hist, p0=guess, maxfev=5000)
                             except RuntimeError as e:
                                 print(e)
                                 print(f"Fit with three gaussians unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")
                                 coeff = guess
-                                covar = np.zeros((7,7)) 
+                                covar = np.zeros((5,5)) 
                             # TODO: delete all nb_fits in docstrings
                             mu = coeff[1]
-                            sigma = np.average(np.array(coeff[2] + coeff[4] + coeff[6]))
+                            sigma = coeff[2]
                             mu_error = np.sqrt(covar[1,1])
-                            sigma_error = np.sqrt(covar[2,2] + covar[4,4] + covar[6,6])
+                            sigma_error = np.sqrt(covar[2,2])
                         
                         mu_arr[i] = mu
                         mu_error_arr[i] = mu_error
@@ -583,8 +571,7 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-        self.__generate_stats(single_run, board, ref_channel, variation, plot=True, spill_index=spill_i, 
-                              fit_option=fit_option)
+        self.__generate_stats(single_run, board, ref_channel, variation, plot=True, spill_index=spill_i, fit_option=fit_option)
 
         
     def __hist_single_run(self, single_run: int = None, ref_channel: str = None, all_channels: bool = None,
