@@ -19,7 +19,8 @@ class Amplitude_Delta(ECAL):
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None,
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global,
                  plot_save_folder: str=plot_save_folder_global, checked: bool=False):
-         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
+        super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
+        self.n_bins = 50
     
     
     # ------------------------------------------------------------------------------------------------------------------------------

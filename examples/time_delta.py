@@ -39,9 +39,9 @@ spill_i_ = 3
 #t.spill_variation(ref_channel_, all_channels_)
 #t.hist(ref_channel_, all_channels_, fit_option='synchronise')
 #t.hist(ref_channel_, all_channels_, fit_option=None)
-#t.hist(ref_channel_, all_channels_, fit_option='gaussians', nb_fits=11)
+#t.hist(ref_channel_, all_channels_, fit_option='gaussians')
 #t.hist(ref_channel=ref_channel_, all_channels=all_channels_, variation=variation_, spill_i=spill_i_) #! variation='spill'
 #t.run_variation(ref_channel_, all_channels_, file_title='run 4 boards 29 June 2022')
 #t.run_colormesh(ref_channel_)
-t.resolution(ref_channel_, 'test_3_boards')
+t.resolution(ref_channel_, 'test_3_gaussians')
 
