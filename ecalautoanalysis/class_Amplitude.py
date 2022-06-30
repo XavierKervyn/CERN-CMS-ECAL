@@ -52,6 +52,7 @@ class Amplitude(ECAL):
         :param variation: ('run' or 'spill') computing the statistics per run or spill
         :param plot: boolean. If True, the histogram of the data is plotted.
         """
+        fit_option = 'gaussians' # TODO: remove
         try:
             if board not in self.letters:
                 raise ValueError("Board must be included in the list of letters")
