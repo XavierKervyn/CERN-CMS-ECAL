@@ -32,24 +32,6 @@ def gaussian(x: float=None, *p: tuple) -> float:
     A, mu, sigma = p
     return A * np.exp(-(x -mu)**2/(2*sigma**2))
 
-
-def multiple_gaussians(x: float=None, *p: tuple) -> float:
-    """
-    Returns a sum of gaussians with parameters given by *p, evaluated at the point x
-    
-    :param x: point at which the function is evaluated
-    :param p: parameters of the gaussians; [amplitude1, mean1, std deviation1, amplitude2, mean2, ...]
-    
-    :return: sum of gaussians evaluated at the point x
-    """
-    n_fit = int(len(p)/3) # find the number of gaussians
-    res = 0
-    for i in range(n_fit):
-        coeff = [p[i*3], p[i*3+1], p[i*3+2]] # pick the coefficients
-        res += gaussian(x, *coeff) # add each gaussian
-    return res
-
-
 """ Parent Class definition """
 
 class ECAL:
@@ -247,4 +229,21 @@ class ECAL:
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title + '.svg')
         fig.write_html(path + file_title + '.html')
+
+
+    def three_gaussians(x: float=None, *p: tuple) -> float:
+        """
+        Returns a sum of three gaussians with parameters given by *p, evaluated at the point x
+        
+        :param x: point at which the function is evaluated
+        :param p: parameters of the gaussians; [amplitude1, mean1, std deviation1, amplitude2, std deviation 2, amplitude3, std deviation 3]
+        
+        :return: sum of three gaussians evaluated at the point x
+        """
+        # TODO: update docstring
+        A1, mu1, sigma1, A2, sigma2, A3, sigma3 = p
+        coeff1 = (A1, mu1, sigma1)
+        coeff2 = (A2, mu1+self.clock_period*1000, sigma2)
+        coeff3 = (A3, mu1-self.clock_period*1000, sigma3)
+        return gaussian(x, *coeff1) + gaussian(x, *coeff2) + gaussian(x, *coeff3) 
         
