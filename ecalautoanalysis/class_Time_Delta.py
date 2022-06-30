@@ -120,6 +120,8 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
+        print(f'Generating .csv, board {board}')
+        fit_option = 'gaussians' # TODO: remove
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
@@ -219,7 +221,7 @@ class Time_Delta(ECAL):
                                 mean_guess = np.average(bin_centers, weights=hist)
                                 sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
-                                guess = [amp_guess, mean_guess, sigma_guess, amp_guess/2, amp_guess/2]
+                                guess = [amp_guess, mean_guess, sigma_guess, amp_guess, amp_guess]
                                 try:
                                     coeff, covar = curve_fit(super()._ECAL__three_gaussians, bin_centers, hist, p0=guess, maxfev=5000)
                                 except RuntimeError as e:
@@ -314,7 +316,7 @@ class Time_Delta(ECAL):
                             mean_guess = np.average(bin_centers, weights=hist)
                             sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
-                            guess = (amp_guess, mean_guess, sigma_guess, amp_guess/2, amp_guess/2)
+                            guess = (amp_guess, mean_guess, sigma_guess, amp_guess, amp_guess)
                             try:
                                 coeff, covar = curve_fit(f=super()._ECAL__three_gaussians, xdata=bin_centers, ydata=hist, p0=guess, maxfev=5000)
                             except RuntimeError as e:
@@ -387,7 +389,7 @@ class Time_Delta(ECAL):
                                    + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
         
         except FileNotFoundError: # generating the statistics file
-            print('File not found, generating .csv')
+            print('File not found')
             self.__generate_stats(single_run, board, ref_channel, variation, plot=False, fit_option=fit_option)  
 
             # loading the file and returning it
@@ -736,7 +738,7 @@ class Time_Delta(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # RESOLUTION
 
-    def __resolution_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None):
+    def __resolution_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None, fit_option: str=None):
         """
         Computes and plots the resolution of all the channels in a given board wrt. a given ref_channel. Points are then
         fitted with the general function sigma_t_fit(). The user must provide a file_title for the plot, related to the 
@@ -746,6 +748,8 @@ class Time_Delta(ECAL):
         :param ref_channel: reference channel with respect to which the differences are computed
         :param file_title: name of the file with the saved plot
         """
+        # TODO: update docstring fit_option
+        # TODO: finish fit_optoin implementation in time, amplitude, amplitude delta and change files names accordingly
         a = Amplitude(self.included_runs, self.letters, checked=True) 
         
         # mean amplitude, sigma and associated errors for the chosen board
@@ -838,7 +842,7 @@ class Time_Delta(ECAL):
             fig.write_html(path + file_title + f' ref {ref_channel} channel {channel}' + '.html')
 
 
-    def resolution(self, ref_channel: str=None, file_title: str=None):
+    def resolution(self, ref_channel: str=None, file_title: str=None, fit_option: str=None):
         """
         Computes and plots the resolution of all board wrt. a given ref_channel. Points are then
         fitted with the general function sigma_t_fit(). The user must provide a file_title for the plot, related to the 
@@ -847,12 +851,13 @@ class Time_Delta(ECAL):
         :param ref_channel: reference channel with respect to which the differences are computed
         :param file_title: name of the file with the saved plot
         """
+        # TODO: update docstring fit_option
         try:
             if len(self.included_runs) <= 1:
                 raise ValueError("Need at least two runs to plot a resolution")    
             for board in self.letters:
                 print(f'Board {board}')
-                self.__resolution_single_board(board, ref_channel, file_title)
+                self.__resolution_single_board(board, ref_channel, file_title, fit_option)
         except ValueError as e:
             print(e)
             

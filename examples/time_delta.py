@@ -30,7 +30,7 @@ t = Time_Delta(included_runs, letters, checked=True)
 # extra arguments
 
 ref_channel_ = 'D2'
-all_channels_ = False
+all_channels_ = True
 variation_ = 'spill'
 spill_i_ = 3
 
