@@ -38,7 +38,8 @@ class ECAL:
     """
     This class is the parent class of Amplitude, Time_Delta and Amplitude_Delta. It contains the attributes and methods 
     that are to be inherited to the entire code structure. This class should be understood as 'virtual', in the sense that
-    it is not possible to have an instance of ECAL.
+    it is not possible to have an instance of ECAL. The boolean checked allows to skip the checking of the consistency of the runs
+    if one already knows that they are consistent.
     
     :param included_runs: run numbers to be analysed, eg. [15610, 15611]
     :param letters: corresponding to the boards connected, eg. ['A', 'B', 'D']
@@ -128,14 +129,17 @@ class ECAL:
         :param x: point at which the function is evaluated
         :param p: parameters of the gaussians; [amplitude1, mean1, std deviation1, amplitude2, amplitude3]
         
-        :return: sum of three gaussians evaluated at the point x
+        :return: sum of three gaussians evaluated at the point x, with period self.clock_period
         """
-        A1, mu1, sigma1, A2, A3 = p
+
+        A1, mu1, sigma1, A2, A3 = p # get the coefficients
         coeff1 = (A1, mu1, sigma1)
         coeff2 = (A2, mu1+self.clock_period*1000, sigma1)
         coeff3 = (A3, mu1-self.clock_period*1000, sigma1)
+        # the gaussians have the same std deviations
         return gaussian(x, *coeff1) + gaussian(x, *coeff2) + gaussian(x, *coeff3) 
-                
+       
+        
     def __plot_hist(self, df: pd.DataFrame=None, channel: str=None, bin_centers: np.array=None, 
                     hist_title: str=None, xlabel: str=None, ylabel: str=None, path: str=None, file_title: str=None, *coeff: tuple):
         """
@@ -216,7 +220,8 @@ class ECAL:
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
         fig.write_html(path + file_title + '.html')
-        
+    
+    
     def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None):
         """
         Plots a 2D colormesh map of the mean of a given quantity (amplitude, amplitude difference, time difference) over all channels
