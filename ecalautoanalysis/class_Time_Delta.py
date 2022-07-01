@@ -242,6 +242,8 @@ class Time_Delta(ECAL):
                             sigma_error_arr[i] = sigma_error
 
                             if plot:
+                                df = pd.DataFrame({'bin_centers': bin_centers, 'hist': hist})
+
                                 title = f'Run: {run_name}, channel: {board + self.numbers[i]}, ref {ref_channel}, spill {spill}'
                                 xlabel = 'Time delta (ps)'
                                 ylabel = 'Occurrence (a.u.)'
@@ -250,8 +252,8 @@ class Time_Delta(ECAL):
                                 file_title = f'Time Delta channel {board + self.numbers[i]} ref {ref_channel} spill {spill}'
                                 plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/' # make the directory
                                 Path(plot_save).mkdir(parents=True, exist_ok=True)
-                                super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel,
-                                                         plot_save, file_title, *coeff)
+                                super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel,
+                                                         plot_save, file_title, 'time', *coeff)
                                 
                         time_mean_spill[j, :] = mu_arr
                         time_mean_err_spill[j, :] = mu_error_arr
@@ -338,6 +340,8 @@ class Time_Delta(ECAL):
                         sigma_error_arr[i] = sigma_error
     
                         if plot:
+                            df = pd.DataFrame({'bin_centers': bin_centers, 'hist': hist})
+
                             title = f'Run: {run_name}, channel: {board + self.numbers[i]}, ref {ref_channel}'
                             xlabel = 'Time delta (ps)'
                             ylabel = 'Occurrence (a.u.)'
@@ -346,8 +350,8 @@ class Time_Delta(ECAL):
                             file_title = f'Time Delta channel {board + self.numbers[i]} ref {ref_channel}'
                             plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
                             Path(plot_save).mkdir(parents=True, exist_ok=True) # make the directory
-                            super()._ECAL__plot_hist(time_delta_pd, channel, bin_centers, title, xlabel, ylabel,
-                                                     plot_save, file_title, *coeff)
+                            super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel,
+                                                     plot_save, file_title, 'time', *coeff)
 
                     # convert the arrays into a single Dataframe
                     run_time_delta_df = pd.DataFrame(
@@ -659,7 +663,8 @@ class Time_Delta(ECAL):
         xlabel = 'Run'
         ylabel = 'Time delta (ps)'
         plot_title = f'Board {board}, ref {ref_channel}, mean time delta over runs'
-        
+        file_title = file_title + f' board {board}' # Add board to file title        
+
         # save the plot with the file_title specified by the user
         plot_save = self.plot_save_folder + '/run_variation/time_delta/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
@@ -721,7 +726,7 @@ class Time_Delta(ECAL):
         file_title = f"Mean Time Delta ref {ref_channel}"
         plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
-        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title)
+        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title, 'time')
 
         
     def run_colormesh(self, ref_channel: str = None, fit_option: str='synchronise'):
@@ -808,7 +813,7 @@ class Time_Delta(ECAL):
             r = sigma_lst[:,j] - sigma_t_fit(x, *coeff)
             chisq = np.sum((r/yerror)**2)
             
-            fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)}, c={round(coeff[1],2)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
+            fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)} ps, c={round(coeff[1],2)} ps', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
 
             fig.add_annotation(text=f'Chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.5, y=0.7, showarrow=False)
 
@@ -817,30 +822,35 @@ class Time_Delta(ECAL):
             xlabel = "Average amplitude A (ADC counts)"
             ylabel = "Absolute time resolution (ps)"
             
-            fig.update_layout(title=plot_title,
-                              xaxis=dict(title=xlabel),
+            fig.update_layout(xaxis=dict(title=xlabel),
                               yaxis=dict(title=ylabel),
-                              updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
-                                           dict(
-                                               buttons = [
-                                                           dict(label="Linear",
-                                                                method="relayout",
-                                                                args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
-                                                           dict(label="Semilog y",
-                                                                method="relayout",
-                                                                args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
-                                                           dict(label="Loglog",
-                                                                method="relayout",
-                                                                args=[{"yaxis.type": "log", "xaxis.type": "log"}])
-                                                         ]
-                                                )
-                                            ]
-                             );
+                              title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
+                              font = dict(size=18),
+                              margin=dict(l=30, r=20, t=50, b=20))
+            """
+                        fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
+                                                       dict(
+                                                           buttons = [
+                                                                       dict(label="Linear",
+                                                                            method="relayout",
+                                                                            args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                                       dict(label="Semilog y",
+                                                                            method="relayout",
+                                                                            args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                                       dict(label="Loglog",
+                                                                            method="relayout",
+                                                                            args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                                     ]
+                                                           )
+                                                      ]
+                                         )
+            """
 
             plot_save = self.plot_save_folder + '/resolution/time_delta/'
             Path(plot_save).mkdir(parents=True, exist_ok=True)
             
             path = plot_save
+            pio.full_figure_for_development(fig, warn=False)
             fig.write_image(path + file_title + f' ref {ref_channel} channel {channel}' + '.png')
             fig.write_image(path + file_title + f' ref {ref_channel} channel {channel}' + '.pdf')
             fig.write_image(path + file_title + f' ref {ref_channel} channel {channel}' + '.svg')

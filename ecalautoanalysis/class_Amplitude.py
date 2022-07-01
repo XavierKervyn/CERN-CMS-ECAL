@@ -142,6 +142,8 @@ class Amplitude(ECAL):
                         sigma_error_arr[i] = sigma_error
 
                         if plot:
+                            df = pd.DataFrame({'bin_centers': bin_centers, 'hist': hist})
+
                             title = f'Run: {run_name}, channel: {board+self.numbers[i]}, spill {spill}'
                             xlabel = 'Amplitude (ADC counts)'
                             ylabel = 'Occurence (a.u.)'
@@ -149,7 +151,7 @@ class Amplitude(ECAL):
                             file_title = f'Amplitude channel {board+self.numbers[i]} spill {spill}'
                             plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
                             Path(plot_save).mkdir(parents=True, exist_ok=True)
-                            super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
+                            super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude', *coeff)
 
                     # gather all the statistics for each spill
                     amp_mean_spill[j,:] = mu_arr
@@ -212,6 +214,8 @@ class Amplitude(ECAL):
                     sigma_error_arr[i] = sigma_error
 
                     if plot: # Generate the plot
+                        df = pd.DataFrame({'bin_centers': bin_centers, 'hist': hist})
+
                         title = f'Run: {run_name}, Channel: {board+self.numbers[i]}'
                         xlabel = 'Amplitude (ADC counts)'
                         ylabel = 'Occurence (a.u.)'
@@ -222,7 +226,8 @@ class Amplitude(ECAL):
                         file_title = f'Amplitude channel {board+self.numbers[i]}'
                         plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
                         Path(plot_save).mkdir(parents=True, exist_ok=True)
-                        super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
+                        #super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude', *coeff)
+                        super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude', *coeff)
 
                 # convert the arrays into a single Dataframe
                 run_amp_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr, 'sigma': sigma_arr, 'sigma error': sigma_error_arr})
@@ -477,6 +482,7 @@ class Amplitude(ECAL):
         xlabel = 'Run'
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Board {board}, mean amplitude over runs'
+        file_title = file_title + f' board {board}' # Add board to file title
         
         plot_save = self.plot_save_folder + '/run_variation/amplitude/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
@@ -527,7 +533,7 @@ class Amplitude(ECAL):
         file_title = 'Mean Amplitude'
         plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
-        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title)
+        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title, 'amplitude')
         
         
     def run_colormesh(self):
@@ -570,7 +576,7 @@ class Amplitude(ECAL):
             mask = (A_lst[:,j] > 0) & (A_lst[:,j] < 10000) 
 
             coeff, covar = curve_fit(sigma_amp_fit, A_lst[:,j][mask], sigma_lst[:,j][mask]/A_lst[:,j][mask], p0=guess, sigma=yerror[mask], maxfev=10000)
-            print(f'channel {channel}, coeff', coeff)
+            print(f'channel {channel}')
             
             fig = make_subplots(specs=[[{"secondary_y": False}]])
             
@@ -586,36 +592,40 @@ class Amplitude(ECAL):
             fig.add_trace(trace2.data[0], secondary_y=False)
             
             # Printing the coefficients in the fit
-            fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)}, s={round(coeff[1],2)}, c={round(coeff[2],2)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
+            fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s={round(coeff[1],2)} ADC^1/2, <br> c={round(coeff[2],2)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
 
             plot_title = f"Amplitude relative resolution, channel {channel}"
-            xlabel = "Average amplitude A (ADC count)"
+            xlabel = "Average amplitude (ADC count)"
             ylabel = "Relative amplitude resolution"
-            fig.update_layout(title=plot_title,
-                              xaxis=dict(title=xlabel),
-                              yaxis=dict(title=ylabel))
-            # Creating a menu to choose between linear, semilogy and loglog
-            fig.update_layout(updatemenus=[
-                                           dict(
-                                               buttons = [
-                                                           dict(label="Linear",
-                                                                method="relayout",
-                                                                args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
-                                                           dict(label="Semilog y",
-                                                                method="relayout",
-                                                                args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
-                                                           dict(label="Loglog",
-                                                                method="relayout",
-                                                                args=[{"yaxis.type": "log", "xaxis.type": "log"}])
-                                                         ]
-                                                )
-                                            ]
-                             );
+            fig.update_layout(xaxis=dict(title=xlabel),
+                              yaxis=dict(title=ylabel),
+                              title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
+                              font = dict(size=18),
+                              margin=dict(l=30, r=20, t=50, b=20))
+            """
+                        fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
+                                                       dict(
+                                                           buttons = [
+                                                                       dict(label="Linear",
+                                                                            method="relayout",
+                                                                            args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                                       dict(label="Semilog y",
+                                                                            method="relayout",
+                                                                            args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                                       dict(label="Loglog",
+                                                                            method="relayout",
+                                                                            args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                                     ]
+                                                           )
+                                                      ]
+                                         )
+            """
             # Saving the figures
             plot_save = self.plot_save_folder + '/resolution/amplitude/'
             Path(plot_save).mkdir(parents=True, exist_ok=True)
             
             path = plot_save
+            pio.full_figure_for_development(fig, warn=False)
             fig.write_image(path + file_title + f' channel {channel}' + '.png')
             fig.write_image(path + file_title + f' channel {channel}' + '.pdf')
             fig.write_image(path + file_title + f' channel {channel}' + '.svg')

@@ -164,6 +164,8 @@ class Amplitude_Delta(ECAL):
                             sigma_error_arr[i] = sigma_error
 
                             if plot:
+                                df = pd.DataFrame({'bin_centers': bin_centers, 'hist': hist})
+
                                 title = f'Run: {run_name}, channel: {board+self.numbers[i]}, ref {ref_channel}, spill {spill}'
                                 xlabel = 'Amplitude delta (ADC counts)'
                                 ylabel = 'Occurence (a.u.)'
@@ -172,7 +174,7 @@ class Amplitude_Delta(ECAL):
                                 
                                 plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
                                 Path(plot_save).mkdir(parents=True, exist_ok=True)
-                                super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
+                                super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude', *coeff)
 
                         amp_mean_spill[j,:] = mu_arr
                         amp_mean_err_spill[j,:] = mu_error_arr
@@ -238,6 +240,8 @@ class Amplitude_Delta(ECAL):
                         sigma_error_arr[i] = sigma_error
 
                         if plot:
+                            df = pd.DataFrame({'bin_centers': bin_centers, 'hist': hist})
+
                             title = f'Run: {run_name}, Channel: {board+self.numbers[i]}, Ref {ref_channel}'
                             xlabel = 'Amplitude delta (ADC counts)'
                             ylabel = 'Occurence (a.u.)'
@@ -246,7 +250,7 @@ class Amplitude_Delta(ECAL):
                                 
                             plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
                             Path(plot_save).mkdir(parents=True, exist_ok=True)
-                            super()._ECAL__plot_hist(amp_delta_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, *coeff)
+                            super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude',*coeff)
 
                     # convert the arrays into a single Dataframe
                     run_amp_delta_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr,
@@ -545,7 +549,7 @@ class Amplitude_Delta(ECAL):
         
         plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/colormesh/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
-        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title)
+        super()._ECAL__plot_colormesh(mean, plot_title, plot_save, file_title, 'amplitude')
 
         
     def run_colormesh(self, ref_channel: str=None, file_title: str=None):
@@ -557,3 +561,4 @@ class Amplitude_Delta(ECAL):
         """
         for single_run in self.included_runs:
             self.__run_colormesh_single_run(single_run, ref_channel, file_title)
+

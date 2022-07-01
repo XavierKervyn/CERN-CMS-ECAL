@@ -13,6 +13,7 @@ from decimal import *
 from pathlib import Path
 from typing import *
 
+import plotly.io as pio
 
 """ Global variables """
 
@@ -141,9 +142,9 @@ class ECAL:
        
         
     def __plot_hist(self, df: pd.DataFrame=None, channel: str=None, bin_centers: np.array=None, 
-                    hist_title: str=None, xlabel: str=None, ylabel: str=None, path: str=None, file_title: str=None, *coeff: tuple):
+                    hist_title: str=None, xlabel: str=None, ylabel: str=None, path: str=None, file_title: str=None, class_type: str=None, *coeff: tuple):
         """
-        Plots the histohram of the DataFrame df for a single channel and with the bin_centers given. Title and labels are 
+        Plots the histogram of the DataFrame df for a single channel and with the bin_centers given. Title and labels are 
         also included in the arguments, as well as the path to save the figure and a tuple with the coefficients for the 
         (multiple) gaussian(s) fit of the data. The name of the saved file is file_title.
         
@@ -158,16 +159,29 @@ class ECAL:
         :param *coeff: pointer to the coefficients computed with the (multiple) gaussian(s) fit
         """
         # Plotting the data
-        trace1 = px.histogram(df, x=channel, nbins=2*self.n_bins)
+        #trace1 = px.histogram(df, x=channel, nbins=2*self.n_bins)
+        trace1 = px.bar(df, x='bin_centers', y='hist')
+        bin_width = (np.max(bin_centers) - np.min(bin_centers)) / (self.n_bins)
+        trace1.update_traces(width=bin_width)
+        trace1.update_traces(marker=dict(line=dict(width=0)))
+        #trace1.update_traces(width=bin_width, marker_line_width=0, selector=dict(type="bar"))
         fig = make_subplots(specs=[[{"secondary_y": False}]])
-        fig.add_trace(trace1.data[0]) # plot the DataFrame
+        fig.add_trace(trace1.data[0]) # plot the DataFrame    
+        #fig.update_layout(bargap=0, bargroupgap = 0)
+
+        if class_type == 'amplitude':
+            unit = 'ADC counts'
+        else:
+            unit = 'ps'
         
         if len(coeff) == 3: # if we only have a gaussian
             d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
 
             amp, mean, sigma = coeff
-            fig.add_vline(x=mean, line_dash='dash', line_color='red', annotation_text=f'mean: {round(mean,2)}', annotation_position="top left")
-            fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2, annotation_text=f'sigma: {round(sigma,2)}', annotation_position="outside bottom right")
+            fig.add_vline(x=mean, line_dash='dash', line_color='red')
+            fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
+            fig.add_annotation(text=f'Mean: {round(mean,2)} {unit},<br>std dev: {round(sigma,2)} {unit}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
+        
         else: # if we have more than 3 parameters in coeff, then it means that we work with three gaussians
             d = {'x': bin_centers, 'y': self.__three_gaussians(bin_centers, *coeff)}
         
@@ -176,11 +190,14 @@ class ECAL:
         trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=['red'])
         fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
 
-        fig.update_layout(title=hist_title,
+        fig.update_layout(title={'text': hist_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                          xaxis_title=xlabel,
-                         yaxis_title=ylabel)
+                         yaxis_title=ylabel,
+                         font = dict(size=18),
+                         margin=dict(l=30, r=20, t=50, b=20))
         
         # Save the figures
+        pio.full_figure_for_development(fig, warn=False)
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
@@ -204,25 +221,34 @@ class ECAL:
         fig = make_subplots(specs=[[{"secondary_y": False}]])
         fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
         
-        fig.update_layout(title=plot_title,
+        fig.update_layout(title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                          xaxis_title=xlabel,
-                         yaxis_title=ylabel)
+                         yaxis_title=ylabel,
+                         font = dict(size=18),
+                         margin=dict(l=30, r=20, t=50, b=20))
 
         # Change ticks of x-axis depending on variation
         if variation == 'spill':
             fig.update_layout(xaxis= dict(tickmode='linear', tick0=1, dtick=1))
         else:
+            tick_list = [str(run) for run in self.included_runs]
+            if len(self.included_runs) > 10: # if too many runs, do not show xtick for each run
+                for i in range(len(tick_list)):
+                    if i%4 != 0:
+                        tick_list[i] = ''
+                #print(tick_list) # TODO: remove
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), 
-                                          ticktext=[str(run) for run in self.included_runs]))
+                                          ticktext=tick_list))
         
         # Save the figures
+        pio.full_figure_for_development(fig, warn=False)
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
         fig.write_html(path + file_title + '.html')
     
     
-    def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None):
+    def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None):
         """
         Plots a 2D colormesh map of the mean of a given quantity (amplitude, amplitude difference, time difference) over all channels
         and boards. 
@@ -238,16 +264,24 @@ class ECAL:
         indices = list(reversed(self.numbers))
         mean_df.index = indices
         
+        if class_type == 'amplitude':
+            unit = 'ADC counts'
+        else:
+            unit = 'ps'        
+
         # Plotting the colormesh
         fig = px.imshow(mean_df,
-                        labels=dict(x="Board", y="Channel"),
+                        labels=dict(x="Board", y="Channel", color=unit),
                         x=self.letters,
                         y=indices
                        )
 
-        fig.update_layout(title=plot_title)
+        fig.update_layout(title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
+                         font = dict(size=18),
+                         margin=dict(l=30, r=20, t=50, b=20))
         
         # Save the figures
+        pio.full_figure_for_development(fig, warn=False)
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title + '.svg')

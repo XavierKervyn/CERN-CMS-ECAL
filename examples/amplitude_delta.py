@@ -6,18 +6,20 @@ import numpy as np
 
 #included_runs = [15680]
 #included_runs = list(np.arange(15728, 15773+1))
+included_runs = list(np.arange(15776, 15821+1))
 
 # list of boards connected
 
-letters = ['C'] 
+#letters = ['C'] 
+letters = ['B', 'D', 'E'] 
 
 # instances
 
-ad = Amplitude_Delta(included_runs, letters)
+ad = Amplitude_Delta(included_runs, letters, checked=True)
 
 # extra arguments
 
-ref_channel_ = 'C2'
+ref_channel_ = 'D3'
 all_channels_ = False
 variation_ = 'spill'
 spill_i_ = 3
