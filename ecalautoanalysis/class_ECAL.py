@@ -156,6 +156,7 @@ class ECAL:
         :param ylabel: label of the y-axis
         :param path: path to save the figure
         :param file_title: title of the file (figure) saved
+        :param class_type: either 'amplitude', 'time_delta' or 'amplitude_delta'
         :param *coeff: pointer to the coefficients computed with the (multiple) gaussian(s) fit
         """
         # Plotting the data
@@ -168,13 +169,14 @@ class ECAL:
         fig = make_subplots(specs=[[{"secondary_y": False}]])
         fig.add_trace(trace1.data[0]) # plot the DataFrame    
         #fig.update_layout(bargap=0, bargroupgap = 0)
-
+        
+        # Compute reduced chi2
         r = df["hist"].to_numpy() - gaussian(bin_centers, *coeff)
         dof = len(df["hist"].to_numpy()) - 3 # Number of degrees of freedom = nb data points - nb parameters
         yerror = np.sqrt(df["hist"].to_numpy())
         chisq = np.sum([(r[i]/yerror[i])**2 for i in range(len(r)) if yerror[i] != 0]) / dof # Reduced chi squared
-
-        if class_type == 'amplitude':
+        # Get correct units
+        if class_type == 'amplitude' or class_type == 'amplitude_delta:
             unit = 'ADC counts'
         else:
             unit = 'ps'
@@ -222,7 +224,9 @@ class ECAL:
         :param plot_title: title of the figure
         :param path: path to the folder where the plot is saved
         :param file_title: title of the file (figure) saved
+        :param class_type: either 'amplitude', 'time_delta' or 'amplitude_delta'
         """
+        # In the case of run amplitude variation, we also want to plot the gain to see at which point it switches from 1 to 10
         if variation == 'run' and class_type == 'amplitude':
             fig = make_subplots(specs=[[{"secondary_y": True}]])
             trace1 = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
@@ -235,7 +239,7 @@ class ECAL:
             xlabel = 'Laser power (au)'
             fig.update_yaxes(title_text="Gain", secondary_y=True)
 
-        else: # variation = 'spill'
+        else: # variation = 'spill' or class_type not 'amplitude'
             fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
 
         fig.update_layout(title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
@@ -255,7 +259,6 @@ class ECAL:
                 for i in range(len(tick_list)):
                     if i%4 != 0:
                         tick_list[i] = ''
-                #print(tick_list) # TODO: remove
        
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
             
@@ -275,6 +278,7 @@ class ECAL:
         :param plot_title: title of the figure
         :param path: path to the folder where the plot is saved
         :param file_title: title of the file (figure) saved
+        :param class_type: either 'amplitude', 'time_delta' or 'amplitude_delta'
         """
         # Formatting DataFrame for the plot
         mean_df = pd.DataFrame(mean)

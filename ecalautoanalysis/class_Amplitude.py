@@ -34,6 +34,7 @@ class Amplitude(ECAL):
     :param raw_data_folder: local path to the folder where the data from DQM is sent
     :param plot_save_folder: local path to the folder where the plots can be saved
     :param n_bins: number of bins in the ampitude histograms
+    :param checked: if checked==True, assumes that the consistency of self.included_runs has already been checked, so it does not apply the consistency check
     """
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None,
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global,
@@ -51,9 +52,9 @@ class Amplitude(ECAL):
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
         :param variation: ('run' or 'spill') computing the statistics per run or spill
-        :param plot: boolean. If True, the histogram of the data is plotted.
+        :param plot: boolean. If True, the histogram of the data is plotted
+        :param spill_index: Index of the spill to consider when variation='spill'
         """
-        # fit_option = 'gaussians' # TODO: remove
         try:
             if board not in self.letters:
                 raise ValueError("Board must be included in the list of letters")
@@ -239,7 +240,7 @@ class Amplitude(ECAL):
                         file_title = f'Amplitude channel {board+self.numbers[i]}'
                         plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
                         Path(plot_save).mkdir(parents=True, exist_ok=True)
-                        #super()._ECAL__plot_hist(amp_pd, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude', *coeff)
+
                         super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude', *coeff)
 
                 # convert the arrays into a single Dataframe
@@ -256,6 +257,7 @@ class Amplitude(ECAL):
                     mask1 = gain_pd[channel] == 1
                     n_10 = mask10.sum()
                     n_1 = mask1.sum()
+                    # Keeping the gain that is most present in the run for each channel
                     if n_10 >= n_1:
                         gain_df[channel] = [10]
                     else:
@@ -385,6 +387,7 @@ class Amplitude(ECAL):
         # keep only the channels for the board. Ex, if 'A', the ['A1', 'A2', etc.]
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
+        # Retrieve spill list in csv file (already generated through load_stats)
         spill_df = pd.read_csv( self.save_folder + f'/Run {single_run}' + f'/Spill spill list amplitude board {board}.csv' )        
         spill_lst = list(spill_df["spills"])
 
@@ -397,7 +400,7 @@ class Amplitude(ECAL):
         # Channel column in plot pd.DataFrame
         channel_column = num_spills*slicing
         
-        # Mean and sigma columns in plot pd.DataFrame
+        # Mean and std dev columns in plot pd.DataFrame
         mean_arr = mean[slicing].to_numpy()
         mean_stacked = mean_arr.flatten()
         sigma_arr = sigma[slicing].to_numpy()
@@ -513,7 +516,7 @@ class Amplitude(ECAL):
         for single_run in self.included_runs:
             gain_df = pd.read_csv(self.save_folder + f'/Run {single_run}' + f'/Run gain board {board}.csv')
             gain_column += list(gain_df.iloc[0])[1:]
-        # Generating the plot	
+        # Generating the plot
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked, 'gain': gain_column})
         
         xlabel = 'Run'
@@ -628,13 +631,13 @@ class Amplitude(ECAL):
             trace2 = px.line(df_fit, x='x', y='y')
             fig.add_trace(trace2.data[0], secondary_y=False)
             
+            # Computing the chi2
             r = sigma_lst[:,j]/A_lst[:,j] - sigma_amp_fit(A_lst[:,j], *coeff)
             dof = len(sigma_lst[:,j]) - 3 # Number of degrees of freedom = nb data points - nb parameters
             chisq = np.sum((r/yerror)**2) / dof # Reduced chi squared
 
             # Printing the coefficients in the fit
             fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s={round(coeff[1],2)} ADC^1/2, <br> c={round(coeff[2],2)}<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False)
-
 
             plot_title = f"Amplitude relative resolution, channel {channel}"
             xlabel = "Average amplitude (ADC count)"
@@ -692,7 +695,7 @@ class Amplitude(ECAL):
 
     def __resolution_all_single_board(self, board: str=None, file_title: str=None):
         """
-        Plots for each channel in the board given the relative amplitude resolution as a function of the amplitude.
+        Plots for each channel in the board given the relative amplitude resolution as a function of the amplitude in a single plot with fit to the function sigma_amp_fit.
         
         :param board: board considered
         :param file_title: name of the figure files to be saved
@@ -709,48 +712,54 @@ class Amplitude(ECAL):
             sigma_lst[i] = self.get_sigma(single_run, board)
             A_err_lst[i] = self.get_mean_err(single_run, board)
             sigma_err_lst[i] = self.get_sigma_err(single_run, board)
-            
+        
+        # Dataframes to plot the data and the fits respectively
         plot_df = pd.DataFrame(columns=['x', 'y', 'err_x', 'err_y', 'channel'])
         fits_df = pd.DataFrame(columns=['x', 'y', 'channel'])
 
         # Plot the resolution for all channels
         fig = make_subplots(specs=[[{"secondary_y": False}]])
         for j, channel in enumerate([board+number for number in self.numbers]):
-
+            # Error from Gaussian error propagation
             yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
-            # Plotting the data with errorbars
+            # Dataframe for a single channel
             df_data = pd.DataFrame({'x': A_lst[:,j], 'y': sigma_lst[:,j]/A_lst[:,j], "err_x": A_err_lst[:,j], "err_y": yerror})
+            # Column containing the channel name for each of the entries of df_data
             channel_column = [channel] * len(self.included_runs)
+            # Add column with the channel name
             df_data['channel'] = channel_column
+            # Append at the bottom of plot_df
             plot_df = pd.concat([plot_df, df_data], axis=0)
-
-            # Fit
+            
+            # Guess for the fit
             guess = [1, 2, 0.02] # TODO: change?
-
             # Mask for the plot because data doesn't fit the model for high amplitudes
-            mask = df_data["x"] > 0 & (df_data["x"] < 10000) 
+            mask = df_data["x"] > 0 & (df_data["x"] < 10000)
 
             coeff, covar = curve_fit(sigma_amp_fit, df_data["x"][mask], df_data["y"][mask], p0=guess, sigma=df_data["err_y"][mask], maxfev=10000)            
             # Plotting the fit
             xx = np.linspace(np.min(df_data["x"]), np.max(df_data["x"]), 100)
             df_fit = pd.DataFrame({'x': xx, 'y': sigma_amp_fit(xx, *coeff)})
+            # Channel column for the fit dataframe
             channel_column_fit = [channel] * len(xx)
-            df_fit['channel'] = channel_column_fit         
+            df_fit['channel'] = channel_column_fit
+            # Append at the bottom of fits_df
             fits_df = pd.concat([fits_df, df_fit], axis=0)
-            
+        # Plot all the data points
         trace1 = px.scatter(data_frame=plot_df, x='x', y='y', error_x="err_x", error_y="err_y", color='channel')
         for trace_data in trace1.data:
             fig.add_trace(trace_data)
-
+        # Plot the fits
         trace2 = px.line(fits_df, x='x', y='y', color='channel')
         for trace_data in trace2.data:
             fig.add_trace(trace_data) # plot the fits
-        """    
+        """
+        # Compute the reduced chi2
         r = plot_df["y"] - sigma_amp_fit(plot_df["x"], *coeff)
         dof = len(plot_df["y"]) - 3 # Number of degrees of freedom = nb data points - nb parameters
         chisq = np.sum((r/plot_df["err_y"])**2) / dof # Reduced chi squared
         """
-        # Printing the coefficients in the fit
+        ## Printing the coefficients in the fit
         #fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s={round(coeff[1],2)} ADC^1/2, <br> c={round(coeff[2],2)}<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False)
 
         plot_title = f"Amplitude relative resolution, board {board}"
@@ -793,7 +802,7 @@ class Amplitude(ECAL):
 
     def resolution_all(self, file_title: str=None):
         """
-        Plots for each channels in self.channel_names the relative amplitude resolution as a function of the amplitude.
+        Plots for each board in self.letters the relative amplitude resolution as a function of the amplitude with a fit to the function sigma_amp_fit.
         
         :param file_title: name of the figure files to be saved
         """
