@@ -81,12 +81,17 @@ class Amplitude_Delta(ECAL):
             else:
                 # Computation with merged data
                 folder =  self.raw_data_folder + str(int(single_run))
-                if variation=='spill' and plot==True:
-                    try: # raises an exception if the index references a non-existing spill
-                        h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
+                if variation == 'spill' and plot:
+                    try:
+                        h2 = uproot.concatenate({folder + f'/{spill_index}.root': 'digi'}, allow_missing=True)
+                        if(type(h2)==list):
+                            raise TypeError
                     except FileNotFoundError as e:
                         print(e)
                         return -1
+                    except TypeError as e:
+                        print(f"Spill {spill_index} in run {single_run} is either empty or incomplete, skipping this spill.")
+                        return -1   
                 else:
                     h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
 
@@ -187,19 +192,23 @@ class Amplitude_Delta(ECAL):
                     spill_amp_sigma_df = pd.DataFrame(amp_sigma_spill, columns=col_list)
                     spill_amp_sigma_err_df = pd.DataFrame(amp_sigma_err_spill, columns=col_list)
 
+                    # Spill list for spill variation
+                    spill_single_df = pd.DataFrame({'spills': list(spill_set)})
+                    spill_single_df.to_csv(self.save_folder + f'/Run {single_run}' + f'/Spill spill list amplitude delta board {board} ref {ref_channel}.csv')
+
                     # save these in .csv files
                     spill_amp_mean_df.to_csv(self.save_folder 
                                              + f'/Run {single_run}' 
-                                             + f'/Spill mean amplitude delta run {single_run} board {board} ref {ref_channel}.csv')
+                                             + f'/Spill mean amplitude delta board {board} ref {ref_channel}.csv')
                     spill_amp_mean_err_df.to_csv(self.save_folder 
                                                  + f'/Run {single_run}' 
-                                                 + f'/Spill error mean amplitude delta run {single_run} board {board} ref {ref_channel}.csv')
+                                                 + f'/Spill error mean amplitude delta board {board} ref {ref_channel}.csv')
                     spill_amp_sigma_df.to_csv(self.save_folder 
                                               + f'/Run {single_run}' 
-                                              + f'/Spill sigma amplitude delta run {single_run} board {board} ref {ref_channel}.csv')
+                                              + f'/Spill sigma amplitude delta board {board} ref {ref_channel}.csv')
                     spill_amp_sigma_err_df.to_csv(self.save_folder 
                                                   + f'/Run {single_run}' 
-                                                  + f'/Spill error sigma amplitude delta run {single_run} board {board} ref {ref_channel}.csv')
+                                                  + f'/Spill error sigma amplitude delta board {board} ref {ref_channel}.csv')
 
                 else: # if variation=='run':
                     amp_delta_pd = self.__compute_delta(amp_pd, board, ref_channel)
@@ -282,16 +291,16 @@ class Amplitude_Delta(ECAL):
             if variation=='spill': # returns a tuple with the 4 files
                 return (pd.read_csv(self.save_folder 
                                     + f'/Run {single_run}' 
-                                    + f'/Spill mean amplitude delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                    + f'/Spill mean amplitude delta board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder 
                                 + f'/Run {single_run}' 
-                                + f'/Spill error mean amplitude delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                + f'/Spill error mean amplitude delta board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder 
                                 + f'/Run {single_run}' 
-                                + f'/Spill sigma amplitude delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                + f'/Spill sigma amplitude delta board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder 
                                 + f'/Run {single_run}' 
-                                + f'/Spill error sigma amplitude delta run {single_run} board {board} ref {ref_channel}.csv'))
+                                + f'/Spill error sigma amplitude delta board {board} ref {ref_channel}.csv'))
             else: # if variation=='run':
                 return pd.read_csv(self.save_folder 
                                    + f'/Run {single_run}' 
@@ -306,16 +315,16 @@ class Amplitude_Delta(ECAL):
             if variation=='spill': # returns a tuple with the 4 files
                 return (pd.read_csv(self.save_folder 
                                     + f'/Run {single_run}' 
-                                    + f'/Spill mean amplitude delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                    + f'/Spill mean amplitude delta board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder 
                                 + f'/Run {single_run}' 
-                                + f'/Spill error mean amplitude delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                + f'/Spill error mean amplitude delta board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder 
                                 + f'/Run {single_run}' 
-                                + f'/Spill sigma amplitude delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                + f'/Spill sigma amplitude delta board {board} ref {ref_channel}.csv'),
                     pd.read_csv(self.save_folder 
                                 + f'/Run {single_run}' 
-                                + f'/Spill error sigma amplitude delta run {single_run} board {board} ref {ref_channel}.csv'))
+                                + f'/Spill error sigma amplitude delta board {board} ref {ref_channel}.csv'))
 
             else: # if variation=='run':
                 return pd.read_csv(self.save_folder 
@@ -342,9 +351,12 @@ class Amplitude_Delta(ECAL):
         num_spills = mean.shape[0] # number of spills in the single run
         
         slicing = [channel for channel in self.channel_names if channel[0] == board]
+
+        spill_df = pd.read_csv( self.save_folder + f'/Run {single_run}' + f'/Spill spill list amplitude delta board {board} ref {ref_channel}.csv' )        
+        spill_lst = list(spill_df["spills"])
         
         # Spill column in pd.DataFrame for plot
-        spill_column_tmp = [len(self.numbers)*[i] for i in range(1, num_spills+1)]
+        spill_column_tmp = [len(self.numbers)*[i] for i in spill_lst]
         spill_column = []
         for lst in spill_column_tmp:
             spill_column += lst

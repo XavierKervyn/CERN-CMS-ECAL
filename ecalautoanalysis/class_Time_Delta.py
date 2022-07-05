@@ -14,7 +14,7 @@ def sigma_t_fit(A: float=None, *p: tuple) -> float:
     
     :return: the time resolution for the given mean amplitude A
     """
-    sigma_N = 1 # TODO: calculate actual pedestal sigma
+    sigma_N = 1 # arbitrary, just scaling
     N, c = p
     return np.sqrt( (N*sigma_N/A)**2 + c**2 )
 
@@ -55,15 +55,25 @@ class Time_Delta(ECAL):
         :return: synchronised value
         """
         # How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5
-        window_leniency = 0.5
-        if value > 0:
-            while value > self.clock_period * window_leniency:
-                value -= self.clock_period
-        else:
-            while value < (-self.clock_period * window_leniency):             
-                value += self.clock_period
-        return float(Decimal(value) % Decimal(self.clock_period))
+        # window_leniency = 0.5
+        # if value > 0:
+        #     while value > self.clock_period * window_leniency:
+        #         value -= self.clock_period
+        # else:
+        #     while value < (-self.clock_period * window_leniency):             
+        #         value += self.clock_period
+        # return float(Decimal(value) % Decimal(self.clock_period))
 
+        # time_delta = time_delta_orig - int(time_delta_orig / period)*period
+
+        div = int(value/(self.clock_period/2))
+        if div%2 == 0:
+            return value - int(div/2)*self.clock_period
+        else:
+            if value < 0:
+                return value - (int(div/2) - 1)*self.clock_period
+            else:
+                return value - (int(div/2) + 1)*self.clock_period
     
     def __compute_delta(self, time: pd.DataFrame = None, board: str = None, ref_channel: int = None,
                              apply_synchroniser: bool = True) -> pd.DataFrame:
@@ -120,7 +130,6 @@ class Time_Delta(ECAL):
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         :param nb_fits: number of gaussians if fit_option opts for multiple gaussians
         """
-        # fit_option = 'gaussians' # TODO: remove
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
@@ -131,14 +140,18 @@ class Time_Delta(ECAL):
             else:
                 # Computation with merged data: retrieve the amplitude
                 folder = self.raw_data_folder + str(int(single_run))
-                if variation == 'spill' and plot == True:
+                if variation == 'spill' and plot:
                     try:
                         h2 = uproot.concatenate({folder + f'/{spill_index}.root': 'digi'}, allow_missing=True)
+                        if(type(h2)==list):
+                            raise TypeError
                     except FileNotFoundError as e:
                         print(e)
                         return -1
-                    
-                else: # if variation == 'run'
+                    except TypeError as e:
+                        print(f"Spill {spill_index} in run {single_run} is either empty or incomplete, skipping this spill.")
+                        return -1   
+                else: # if variation == 'run' or variation == 'spill' and not plot
                     h2 = uproot.concatenate({folder + '/*.root': 'digi'}, allow_missing=True)
 
                 run_name = os.path.basename(os.path.normpath(folder))
@@ -148,7 +161,7 @@ class Time_Delta(ECAL):
 
                 slicing = [channel for channel in self.channel_names if channel[0] == board]
 
-                ref_idx = h2[ref_channel][0]
+                # ref_idx = h2[ref_channel][0] # TODO: remove since not used?
                 time = h2['time_max']
                 #time = h2['time'] #TODO: check
                 
@@ -205,6 +218,7 @@ class Time_Delta(ECAL):
                                 sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
                                 guess = [np.max(hist), mean_guess, sigma_guess]
+                                
                                 try:
                                     coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
                                 except RuntimeError as e:
@@ -266,15 +280,19 @@ class Time_Delta(ECAL):
                     spill_time_sigma_df = pd.DataFrame(time_sigma_spill, columns=col_list)
                     spill_time_sigma_err_df = pd.DataFrame(time_sigma_err_spill, columns=col_list)
 
+                    # Spill list for spill variation
+                    spill_single_df = pd.DataFrame({'spills': list(spill_set)})
+                    spill_single_df.to_csv(self.save_folder + f'/Run {single_run}' + f'/Spill spill list time delta board {board} ref {ref_channel}.csv')
+
                     # save these in .csv files
                     spill_time_mean_df.to_csv(self.save_folder + f'/Run {single_run}'
-                                              + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv')
+                                              + f'/Spill mean time delta board {board} ref {ref_channel}.csv')
                     spill_time_mean_err_df.to_csv(self.save_folder + f'/Run {single_run}'
-                                                  + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv')
+                                                  + f'/Spill error mean time delta board {board} ref {ref_channel}.csv')
                     spill_time_sigma_df.to_csv(self.save_folder + f'/Run {single_run}'
-                                               + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
+                                               + f'/Spill sigma time delta board {board} ref {ref_channel}.csv')
                     spill_time_sigma_err_df.to_csv(self.save_folder + f'/Run {single_run}'
-                                                   + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv')
+                                                   + f'/Spill error sigma time delta board {board} ref {ref_channel}.csv')
 
                 else:  # variation=='run':
                     if fit_option == 'synchronise':
@@ -294,7 +312,7 @@ class Time_Delta(ECAL):
                         if channel == ref_channel:
                             continue
 
-                        hist, bin_edges = np.histogram(time_delta_pd[channel], bins=1500)
+                        hist, bin_edges = np.histogram(time_delta_pd[channel], bins=self.n_bins)
                         bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)
 
                         if fit_option == 'synchronise' or fit_option == None:
@@ -303,6 +321,7 @@ class Time_Delta(ECAL):
                             sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
                             guess = [np.max(hist), mean_guess, sigma_guess]
+
                             try:
                                 coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
                             except RuntimeError as e:
@@ -315,14 +334,26 @@ class Time_Delta(ECAL):
                             sigma = coeff[2]
                             sigma_error = np.sqrt(covar[2, 2])
                         else:
+                            # TODO: delete?
+                            # Mask so that we only consider bins in a range of (-2periods, 2periods)
+                            period_ps = self.clock_period*1000
+                            mask = np.abs(bin_centers) < 2*period_ps
+                            bin_centers = bin_centers[mask]
+                            hist = hist[mask]
+
                             # fitting process with multiple gaussians
                             amp_guess = np.max(hist)
                             mean_guess = np.average(bin_centers, weights=hist)
                             sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
                             guess = (amp_guess, mean_guess, sigma_guess, amp_guess, amp_guess)
+            
                             try:
-                                coeff, covar = curve_fit(f=super()._ECAL__three_gaussians, xdata=bin_centers, ydata=hist, p0=guess, maxfev=5000)
+                                #coeff, covar = curve_fit(f=super()._ECAL__three_gaussians, xdata=bin_centers, ydata=hist, p0=guess, maxfev=5000)
+                                
+                                bound = ([-np.inf, -period_ps, -np.inf, -np.inf, -np.inf], [np.inf, period_ps, np.inf, np.inf, np.inf])
+                                coeff, covar = curve_fit(f=super()._ECAL__three_gaussians, xdata=bin_centers, ydata=hist, p0=guess, maxfev=5000, bounds=bound) # TODO: remove?
+
                             except RuntimeError as e:
                                 print(e)
                                 print(f"Fit with three gaussians unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")
@@ -383,13 +414,13 @@ class Time_Delta(ECAL):
 
             if variation == 'spill':  # returns a tuple with the 4 files
                 return (pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                    + f'/Spill mean time delta board {board} ref {ref_channel}.csv'),
                         pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                    + f'/Spill error mean time delta board {board} ref {ref_channel}.csv'),
                         pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                    + f'/Spill sigma time delta board {board} ref {ref_channel}.csv'),
                         pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv'))
+                                    + f'/Spill error sigma time delta board {board} ref {ref_channel}.csv'))
             else:  # variation=='run':
                 return pd.read_csv(self.save_folder + f'/Run {single_run}'
                                    + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
@@ -401,13 +432,13 @@ class Time_Delta(ECAL):
             # loading the file and returning it
             if variation == 'spill':  # returns a tuple with the 4 files
                 return (pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                    + f'/Spill mean time delta board {board} ref {ref_channel}.csv'),
                         pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill error mean time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                    + f'/Spill error mean time delta board {board} ref {ref_channel}.csv'),
                         pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill sigma time delta run {single_run} board {board} ref {ref_channel}.csv'),
+                                    + f'/Spill sigma time delta board {board} ref {ref_channel}.csv'),
                         pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill error sigma time delta run {single_run} board {board} ref {ref_channel}.csv'))
+                                    + f'/Spill error sigma time delta board {board} ref {ref_channel}.csv'))
             else:  # variation=='run':
                 return pd.read_csv(self.save_folder + f'/Run {single_run}'
                                    + f'/Run time delta run {single_run} board {board} ref {ref_channel}.csv')
@@ -494,8 +525,11 @@ class Time_Delta(ECAL):
 
         slicing = [channel for channel in self.channel_names if channel[0] == board]
 
+        spill_df = pd.read_csv( self.save_folder + f'/Run {single_run}' + f'/Spill spill list time delta board {board} ref {ref_channel}.csv' )        
+        spill_lst = list(spill_df["spills"])
+        
         # Spill column in pd.DataFrame for plot
-        spill_column_tmp = [len(self.numbers) * [i] for i in range(1, num_spills + 1)]
+        spill_column_tmp = [len(self.numbers) * [i] for i in spill_lst]
         spill_column = []
         for lst in spill_column_tmp:
             spill_column += lst
@@ -811,11 +845,10 @@ class Time_Delta(ECAL):
             fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
 
             r = sigma_lst[:,j] - sigma_t_fit(x, *coeff)
-            chisq = np.sum((r/yerror)**2)
+            dof = len(sigma_lst[:,j]) - 2 # Number of degrees of freedom = nb data points - nb parameters
+            chisq = np.sum((r/yerror)**2) / dof # Reduced chi squared
             
-            fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)} ps, c={round(coeff[1],2)} ps', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
-
-            fig.add_annotation(text=f'Chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.5, y=0.7, showarrow=False)
+            fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)} ps, c={round(coeff[1],2)} ps<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False)
 
             # add title and label
             plot_title = f"Time delta absolute resolution, ref {ref_channel}, channel {channel}"

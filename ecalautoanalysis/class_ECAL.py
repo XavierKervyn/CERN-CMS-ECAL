@@ -161,7 +161,7 @@ class ECAL:
         # Plotting the data
         #trace1 = px.histogram(df, x=channel, nbins=2*self.n_bins)
         trace1 = px.bar(df, x='bin_centers', y='hist')
-        bin_width = (np.max(bin_centers) - np.min(bin_centers)) / (self.n_bins)
+        bin_width = (np.max(bin_centers) - np.min(bin_centers)) / len(bin_centers)
         trace1.update_traces(width=bin_width)
         trace1.update_traces(marker=dict(line=dict(width=0)))
         #trace1.update_traces(width=bin_width, marker_line_width=0, selector=dict(type="bar"))
@@ -218,27 +218,42 @@ class ECAL:
         :param path: path to the folder where the plot is saved
         :param file_title: title of the file (figure) saved
         """
-        fig = make_subplots(specs=[[{"secondary_y": False}]])
-        fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
-        
+        if variation == 'run':
+            fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
+            fig2 = px.line(data_frame=df, x=variation, y='gain', color='channel')              
+
+            xlabel = 'Laser power (au)'
+        else: # variation = 'spill'
+            fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
+
         fig.update_layout(title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                          xaxis_title=xlabel,
                          yaxis_title=ylabel,
                          font = dict(size=18),
                          margin=dict(l=30, r=20, t=50, b=20))
 
+        if variation == 'run':
+            fig2.update_layout(title={'text': 'Gain over runs', 'y':0.98, 'x':0.5, 'xanchor': 'center'},
+                 xaxis_title=xlabel,
+                 yaxis_title='Gain',
+                 font = dict(size=18),
+                 margin=dict(l=30, r=20, t=50, b=20))
+
         # Change ticks of x-axis depending on variation
         if variation == 'spill':
             fig.update_layout(xaxis= dict(tickmode='linear', tick0=1, dtick=1))
         else:
-            tick_list = [str(run) for run in self.included_runs]
+            #tick_list = [str(run) for run in self.included_runs]
+            tick_list = list(np.arange(140, 232, 2)) # Input power instead of run number
+
             if len(self.included_runs) > 10: # if too many runs, do not show xtick for each run
                 for i in range(len(tick_list)):
                     if i%4 != 0:
                         tick_list[i] = ''
                 #print(tick_list) # TODO: remove
-            fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), 
-                                          ticktext=tick_list))
+       
+            fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
+            fig2.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
         
         # Save the figures
         pio.full_figure_for_development(fig, warn=False)
@@ -246,6 +261,13 @@ class ECAL:
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
         fig.write_html(path + file_title + '.html')
+
+        if variation == 'run':
+            pio.full_figure_for_development(fig2, warn=False)
+            fig2.write_image(path + file_title + ' gain' + '.png')
+            fig2.write_image(path + file_title + ' gain' + '.pdf')
+            fig2.write_image(path + file_title + ' gain' +'.svg')
+            fig2.write_html(path + file_title + ' gain' + '.html')
     
     
     def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None):

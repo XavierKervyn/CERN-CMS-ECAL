@@ -62,11 +62,16 @@ class Amplitude(ECAL):
 
             # Computation with merged data: retrieve the amplitude
             folder =  self.raw_data_folder + str(int(single_run))
-            if variation=='spill' and plot==True:
+            if variation == 'spill' and plot:
                 try:
-                    h2 = uproot.concatenate({folder + f'/{spill_index}.root' : 'digi'}, allow_missing = True)
+                    h2 = uproot.concatenate({folder + f'/{spill_index}.root': 'digi'}, allow_missing=True)
+                    if(type(h2)==list):
+                        raise TypeError
                 except FileNotFoundError as e:
                     print(e)
+                    return -1
+                except TypeError as e:
+                    print(f"Spill {spill_index} in run {single_run} is either empty or incomplete, skipping this spill.")
                     return -1
             else:
                 h2 = uproot.concatenate({folder + '/*.root' : 'digi'}, allow_missing = True)
@@ -81,12 +86,16 @@ class Amplitude(ECAL):
             amp = h2['amp_max'] # retrieve the amplitude in the .root file
             amp_pd = pd.DataFrame(amp, columns=self.channel_names)[slicing]
 
+            # Get gain
+            gain = h2['gain']
+            gain_pd = pd.DataFrame(gain, columns=self.channel_names)[slicing]
+
             # column header
             col_list = len(self.numbers)*[board]; col_list = [x + y for x,y in zip(col_list, self.numbers)] 
 
             if variation=='spill': # if we want to compute the statistics per spill
                 # retrieve the spill number in the .root file
-                if plot==True:
+                if plot:
                     h1 = uproot.concatenate({folder + f'/{spill_index}.root' : 'h4'}, allow_missing = True)
                 else:
                     h1 = uproot.concatenate({folder + '/*.root' : 'h4'}, allow_missing = True)
@@ -166,15 +175,19 @@ class Amplitude(ECAL):
                     spill_amp_sigma_df = pd.DataFrame(amp_sigma_spill, columns=col_list)
                     spill_amp_sigma_err_df = pd.DataFrame(amp_sigma_err_spill, columns=col_list)
 
+                    # Spill list for spill variation
+                    spill_single_df = pd.DataFrame({'spills': list(spill_set)})
+                    spill_single_df.to_csv(self.save_folder + f'/Run {single_run}' + f'/Spill spill list amplitude board {board}.csv')
+
                     # save these in .csv files: 4 files created per tuple (run, board)
-                    spill_amp_mean_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                             + f'/Spill mean amplitude run {single_run} board {board}.csv')
+                    spill_amp_mean_df.to_csv(self.save_folder + f'/Run {single_run}'
+                                             + f'/Spill mean amplitude board {board}.csv')
                     spill_amp_mean_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                                 + f'/Spill error mean amplitude run {single_run} board {board}.csv')
+                                                 + f'/Spill error mean amplitude board {board}.csv')
                     spill_amp_sigma_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                              + f'/Spill sigma amplitude run {single_run} board {board}.csv')
+                                              + f'/Spill sigma amplitude board {board}.csv')
                     spill_amp_sigma_err_df.to_csv(self.save_folder + f'/Run {single_run}' 
-                                                  + f'/Spill error sigma amplitude run {single_run} board {board}.csv')
+                                                  + f'/Spill error sigma amplitude board {board}.csv')
 
             else: # if variation=='run'
                 # empty arrays to store the statistics of each channel
@@ -235,6 +248,22 @@ class Amplitude(ECAL):
                 # save it in a single .csv file per tuple (run, board)
                 run_amp_df.to_csv(self.save_folder + f'/Run {single_run}' 
                                   + f'/Run amplitude run {single_run} board {board}.csv')
+
+                # Save gain in csv file
+                gain_df = pd.DataFrame()
+                for channel in slicing: 
+                    mask10 = gain_pd[channel] == 10
+                    mask1 = gain_pd[channel] == 1
+                    n_10 = mask10.sum()
+                    n_1 = mask1.sum()
+                    if n_10 >= n_1:
+                        gain_df[channel] = [10]
+                    else:
+                        gain_df[channel] = [1]
+
+                gain_df.to_csv(self.save_folder + f'/Run {single_run}' 
+                                  + f'/Run gain board {board}.csv')
+
         except ValueError as e:
             print(e)
     
@@ -254,13 +283,13 @@ class Amplitude(ECAL):
             
             if variation=='spill':
                 return (pd.read_csv(self.save_folder + f'/Run {single_run}' 
-                                    + f'/Spill mean amplitude run {single_run} board {board}.csv'),
+                                    + f'/Spill mean amplitude board {board}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                + f'/Spill error mean amplitude run {single_run} board {board}.csv'),
+                                + f'/Spill error mean amplitude board {board}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                + f'/Spill sigma amplitude run {single_run} board {board}.csv'),
+                                + f'/Spill sigma amplitude board {board}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                + f'/Spill error sigma amplitude run {single_run} board {board}.csv'))
+                                + f'/Spill error sigma amplitude board {board}.csv'))
             else: # if variation=='run':
                 return pd.read_csv(self.save_folder + f'/Run {single_run}'
                                    + f'/Run amplitude run {single_run} board {board}.csv')
@@ -272,13 +301,13 @@ class Amplitude(ECAL):
             # loading the file and returning it
             if variation=='spill':
                 return (pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                    + f'/Spill mean amplitude run {single_run} board {board}.csv'),
+                                    + f'/Spill mean amplitude board {board}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                + f'/Spill error mean amplitude run {single_run} board {board}.csv'),
+                                + f'/Spill error mean amplitude board {board}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                + f'/Spill sigma amplitude run {single_run} board {board}.csv'),
+                                + f'/Spill sigma amplitude board {board}.csv'),
                     pd.read_csv(self.save_folder + f'/Run {single_run}'
-                                + f'/Spill error sigma amplitude run {single_run} board {board}.csv'))
+                                + f'/Spill error sigma amplitude board {board}.csv'))
             else: # if variation=='run':
                 return pd.read_csv(self.save_folder + f'/Run {single_run}'
                                    + f'/Run amplitude run {single_run} board {board}.csv')
@@ -356,8 +385,11 @@ class Amplitude(ECAL):
         # keep only the channels for the board. Ex, if 'A', the ['A1', 'A2', etc.]
         slicing = [channel for channel in self.channel_names if channel[0] == board]
         
+        spill_df = pd.read_csv( self.save_folder + f'/Run {single_run}' + f'/Spill spill list amplitude board {board}.csv' )        
+        spill_lst = list(spill_df["spills"])
+
         # Spill column in pd.DataFrame for plot
-        spill_column_tmp = [len(self.numbers)*[i] for i in range(1, num_spills+1)]
+        spill_column_tmp = [len(self.numbers)*[i] for i in spill_lst]
         spill_column = []
         for lst in spill_column_tmp:
             spill_column += lst
@@ -458,7 +490,7 @@ class Amplitude(ECAL):
         for i, single_run in enumerate(self.included_runs):
             run_amp_df = self.__load_stats(single_run, board, 'run') # 4 columns, n_numbers rows
             mean[i,:] = run_amp_df["mu"]
-            sigma[i,:] = run_amp_df["sigma"] 
+            sigma[i,:] = run_amp_df["sigma"]
         
         # keep only the channels of the board we are interested in
         slicing = [channel for channel in self.channel_names if channel[0] == board]
@@ -476,8 +508,13 @@ class Amplitude(ECAL):
         mean_stacked = mean.flatten()
         sigma_stacked = sigma.flatten()
         
-        # Generating the plot
-        plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
+        # Get gain from csv (already generated by load_stats)
+        gain_column = []
+        for single_run in self.included_runs:
+            gain_df = pd.read_csv(self.save_folder + f'/Run {single_run}' + f'/Run gain board {board}.csv')
+            gain_column += list(gain_df.iloc[0])[1:]
+        # Generating the plot	
+        plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked, 'gain': gain_column})
         
         xlabel = 'Run'
         ylabel = 'Amplitude (ADC counts)'
@@ -591,8 +628,13 @@ class Amplitude(ECAL):
             trace2 = px.line(df_fit, x='x', y='y')
             fig.add_trace(trace2.data[0], secondary_y=False)
             
+            r = sigma_lst[:,j]/A_lst[:,j] - sigma_amp_fit(A_lst[:,j], *coeff)
+            dof = len(sigma_lst[:,j]) - 3 # Number of degrees of freedom = nb data points - nb parameters
+            chisq = np.sum((r/yerror)**2) / dof # Reduced chi squared
+
             # Printing the coefficients in the fit
-            fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s={round(coeff[1],2)} ADC^1/2, <br> c={round(coeff[2],2)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
+            fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s={round(coeff[1],2)} ADC^1/2, <br> c={round(coeff[2],2)}<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False)
+
 
             plot_title = f"Amplitude relative resolution, channel {channel}"
             xlabel = "Average amplitude (ADC count)"
