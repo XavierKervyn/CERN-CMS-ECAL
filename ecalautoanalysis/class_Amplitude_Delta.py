@@ -15,6 +15,7 @@ class Amplitude_Delta(ECAL):
     :param save_folder: local path to the folder where files will be saved
     :param raw_data_folder: local path to the folder where the data from DQM is sent
     :param plot_save_folder: local path to the folder where the plots can be saved
+    :param checked: if checked==True, assumes that the consistency of self.included_runs has already been checked, so it does not apply the consistency check
     """
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None,
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global,
@@ -179,7 +180,7 @@ class Amplitude_Delta(ECAL):
                                 
                                 plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
                                 Path(plot_save).mkdir(parents=True, exist_ok=True)
-                                super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude', *coeff)
+                                super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude_delta', *coeff)
 
                         amp_mean_spill[j,:] = mu_arr
                         amp_mean_err_spill[j,:] = mu_error_arr
@@ -259,7 +260,7 @@ class Amplitude_Delta(ECAL):
                                 
                             plot_save = self.plot_save_folder + '/Run ' + str(run_name) + '/histogram/'
                             Path(plot_save).mkdir(parents=True, exist_ok=True)
-                            super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude',*coeff)
+                            super()._ECAL__plot_hist(df, channel, bin_centers, title, xlabel, ylabel, plot_save, file_title, 'amplitude_delta',*coeff)
 
                     # convert the arrays into a single Dataframe
                     run_amp_delta_df = pd.DataFrame({'mu':mu_arr, 'mu error':mu_error_arr,
