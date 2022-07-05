@@ -523,7 +523,7 @@ class Amplitude(ECAL):
         
         plot_save = self.plot_save_folder + '/run_variation/amplitude/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
-        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title)
+        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title, 'amplitude')
     
 
     def run_variation(self, file_title: str=None):
@@ -686,5 +686,122 @@ class Amplitude(ECAL):
                 
             for board in self.letters:
                 self.__resolution_single_board(board, file_title)
+        except ValueError as e:
+            print(e)
+
+
+    def __resolution_all_single_board(self, board: str=None, file_title: str=None):
+        """
+        Plots for each channel in the board given the relative amplitude resolution as a function of the amplitude.
+        
+        :param board: board considered
+        :param file_title: name of the figure files to be saved
+        """
+        # Arrays with the stats for all included runs and channels in the board
+        A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        
+        # Filling the arrays
+        for i, single_run in enumerate(self.included_runs):
+            A_lst[i] = self.get_mean(single_run, board)
+            sigma_lst[i] = self.get_sigma(single_run, board)
+            A_err_lst[i] = self.get_mean_err(single_run, board)
+            sigma_err_lst[i] = self.get_sigma_err(single_run, board)
+            
+        plot_df = pd.DataFrame(columns=['x', 'y', 'err_x', 'err_y', 'channel'])
+        fits_df = pd.DataFrame(columns=['x', 'y', 'channel'])
+
+        # Plot the resolution for all channels
+        fig = make_subplots(specs=[[{"secondary_y": False}]])
+        for j, channel in enumerate([board+number for number in self.numbers]):
+
+            yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
+            # Plotting the data with errorbars
+            df_data = pd.DataFrame({'x': A_lst[:,j], 'y': sigma_lst[:,j]/A_lst[:,j], "err_x": A_err_lst[:,j], "err_y": yerror})
+            channel_column = [channel] * len(self.included_runs)
+            df_data['channel'] = channel_column
+            plot_df = pd.concat([plot_df, df_data], axis=0)
+
+            # Fit
+            guess = [1, 2, 0.02] # TODO: change?
+
+            # Mask for the plot because data doesn't fit the model for high amplitudes
+            mask = df_data["x"] > 0 & (df_data["x"] < 10000) 
+
+            coeff, covar = curve_fit(sigma_amp_fit, df_data["x"][mask], df_data["y"][mask], p0=guess, sigma=df_data["err_y"][mask], maxfev=10000)            
+            # Plotting the fit
+            xx = np.linspace(np.min(df_data["x"]), np.max(df_data["x"]), 100)
+            df_fit = pd.DataFrame({'x': xx, 'y': sigma_amp_fit(xx, *coeff)})
+            channel_column_fit = [channel] * len(xx)
+            df_fit['channel'] = channel_column_fit         
+            fits_df = pd.concat([fits_df, df_fit], axis=0)
+            
+        trace1 = px.scatter(data_frame=plot_df, x='x', y='y', error_x="err_x", error_y="err_y", color='channel')
+        for trace_data in trace1.data:
+            fig.add_trace(trace_data)
+
+        trace2 = px.line(fits_df, x='x', y='y', color='channel')
+        for trace_data in trace2.data:
+            fig.add_trace(trace_data) # plot the fits
+        """    
+        r = plot_df["y"] - sigma_amp_fit(plot_df["x"], *coeff)
+        dof = len(plot_df["y"]) - 3 # Number of degrees of freedom = nb data points - nb parameters
+        chisq = np.sum((r/plot_df["err_y"])**2) / dof # Reduced chi squared
+        """
+        # Printing the coefficients in the fit
+        #fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s={round(coeff[1],2)} ADC^1/2, <br> c={round(coeff[2],2)}<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False)
+
+        plot_title = f"Amplitude relative resolution, board {board}"
+        xlabel = "Average amplitude (ADC count)"
+        ylabel = "Relative amplitude resolution"
+        fig.update_layout(xaxis=dict(title=xlabel),
+                          yaxis=dict(title=ylabel),
+                          title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
+                          font = dict(size=18),
+                          margin=dict(l=30, r=20, t=50, b=20))
+        """
+                    fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
+                                                   dict(
+                                                       buttons = [
+                                                                   dict(label="Linear",
+                                                                        method="relayout",
+                                                                        args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                                   dict(label="Semilog y",
+                                                                        method="relayout",
+                                                                        args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                                   dict(label="Loglog",
+                                                                        method="relayout",
+                                                                        args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                                 ]
+                                                       )
+                                                  ]
+                                     )
+        """
+        # Saving the figures
+        plot_save = self.plot_save_folder + '/resolution/amplitude/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        
+        path = plot_save
+        pio.full_figure_for_development(fig, warn=False)
+        fig.write_image(path + file_title + f' board {board}' + '.png')
+        fig.write_image(path + file_title + f' board {board}' + '.pdf')
+        fig.write_image(path + file_title + f' board {board}' + '.svg')
+        fig.write_html(path + file_title + f' board {board}' + '.html')
+
+
+    def resolution_all(self, file_title: str=None):
+        """
+        Plots for each channels in self.channel_names the relative amplitude resolution as a function of the amplitude.
+        
+        :param file_title: name of the figure files to be saved
+        """
+        try: # Checking if there are enough runs for the resolutin fit
+            if len(self.included_runs)  <= 2:
+                raise ValueError('Need at least three runs to fit the three parameters for the amplitude resolution')
+                
+            for board in self.letters:
+                self.__resolution_all_single_board(board, file_title)
         except ValueError as e:
             print(e)

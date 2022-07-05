@@ -779,7 +779,7 @@ class Time_Delta(ECAL):
     # ------------------------------------------------------------------------------------------------------------------------------
     # RESOLUTION
 
-    def __resolution_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None):
+    def __resolution_all_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None):
         """
         Computes and plots the resolution of all the channels in a given board wrt. a given ref_channel. Points are then
         fitted with the general function sigma_t_fit(). The user must provide a file_title for the plot, related to the 
@@ -905,6 +905,150 @@ class Time_Delta(ECAL):
             for board in self.letters:
                 print(f'Board {board}')
                 self.__resolution_single_board(board, ref_channel, file_title)
+        except ValueError as e:
+            print(e)
+
+
+    def __resolution_all_single_board(self, board: str=None, ref_channel: str=None, file_title: str=None):
+        """
+        Computes and plots the resolution of all the channels in a given board wrt. a given ref_channel. Points are then
+        fitted with the general function sigma_t_fit(). The user must provide a file_title for the plot, related to the 
+        included_runs considered for the resolution.
+        
+        :param board: board considered
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param file_title: name of the file with the saved plot
+        """
+        a = Amplitude(self.included_runs, self.letters, checked=True) 
+
+        # mean amplitude, sigma and associated errors for the chosen board
+        A_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        A_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        sigma_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+
+        # mean amplitude and associated error for the board containing the reference channel
+        A_ref_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+        A_ref_err_lst = np.zeros((len(self.included_runs), len(self.numbers)))
+
+        # fill the lists
+        for i, single_run in enumerate(self.included_runs):
+            A_lst[i] = a.get_mean(single_run, board)
+            sigma_lst[i] = np.abs(self.get_sigma(single_run, board, ref_channel))
+            A_err_lst[i] = a.get_mean_err(single_run, board)
+            sigma_err_lst[i] = np.abs(self.get_sigma_err(single_run, board, ref_channel))
+
+            A_ref_lst[i] = a.get_mean(single_run, ref_channel[0])
+            A_ref_err_lst[i] = a.get_mean_err(single_run, ref_channel[0])
+
+        # keep only the data for the ref_channel
+        A2 = A_ref_lst[:,int(ref_channel[1])-1]
+        dA2 = A_ref_err_lst[:,int(ref_channel[1])-1]
+
+        # Plot the resolution for all channels
+        plot_df = pd.DataFrame(columns=['x', 'y', 'err_x', 'err_y', 'channel'])
+        fits_df = pd.DataFrame(columns=['x', 'y', 'channel'])
+
+        fig = make_subplots(specs=[[{"secondary_y": False}]])
+        for j, channel in enumerate([board+number for number in self.numbers]):
+            if channel == ref_channel: # ignore the reference channel if it is in the board given
+                continue
+            A1 = A_lst[:,j]
+            dA1 = A_err_lst[:,j]
+            x = A1*A2 / np.sqrt(A1**2 + A2**2)
+
+            # define the errorbars
+            xerror = x * (dA1/A1 + dA2/A2 + (A1*dA1 + A2*dA2)/(A1**2 + A2**2)) # 'mean' amplitude across channels 
+            yerror = sigma_err_lst[:,j]
+
+            df_data = pd.DataFrame({'x': x, 'y': sigma_lst[:,j], "err_x": xerror, "err_y": yerror})
+
+            channel_column_data = [channel] * len(self.included_runs)
+            df_data['channel'] = channel_column_data           
+            plot_df = pd.concat([plot_df, df_data], axis=0)
+
+            # Fit
+            guess = [100000, 50] # provide a good first guess to compute the fit
+            coeff, covar = curve_fit(sigma_t_fit, df_data["x"], df_data["y"], sigma=df_data["err_y"], p0=guess, maxfev=5000) # fit the coefficients to the data
+                
+            xx = np.linspace(np.min(df_data["x"]), np.max(df_data["x"]), 100) # linspace to have an almost continuous fit
+            
+            df_fit = pd.DataFrame({'x': xx, 'y': sigma_t_fit(xx, *coeff)})
+            channel_column_fit = [channel] * len(xx)
+            df_fit['channel'] = channel_column_fit         
+            fits_df = pd.concat([fits_df, df_fit], axis=0)
+      
+        trace1 = px.scatter(data_frame=plot_df, x='x', y='y', 
+                            error_x="err_x", error_y="err_y", 
+                            color='channel')
+        for trace_data in trace1.data:
+            fig.add_trace(trace_data)
+
+        trace2 = px.line(fits_df, x='x', y='y', color='channel')
+        for trace_data in trace2.data:
+            fig.add_trace(trace_data) # plot the fits
+        """
+        r = plot_df["y"] - sigma_t_fit(plot_df["x"], *coeff)
+        dof = len(plot_df["y"]) - 2 # Number of degrees of freedom = nb data points - nb parameters
+        chisq = np.sum((r/plot_df["err_y"])**2) / dof # Reduced chi squared
+        """ 
+        #fig.add_annotation(text=f'Parameters: N={round(coeff[0],2)} ps, c={round(coeff[1],2)} ps<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False)
+
+        # add title and label
+        plot_title = f"Time delta absolute resolution, ref {ref_channel}, channel {channel}"
+        xlabel = "Average amplitude A (ADC counts)"
+        ylabel = "Absolute time resolution (ps)"
+        
+        fig.update_layout(xaxis=dict(title=xlabel),
+                          yaxis=dict(title=ylabel),
+                          title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
+                          font = dict(size=18),
+                          margin=dict(l=30, r=20, t=50, b=20))
+        """
+                    fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
+                                                   dict(
+                                                       buttons = [
+                                                                   dict(label="Linear",
+                                                                        method="relayout",
+                                                                        args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                                   dict(label="Semilog y",
+                                                                        method="relayout",
+                                                                        args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                                   dict(label="Loglog",
+                                                                        method="relayout",
+                                                                        args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                                 ]
+                                                       )
+                                                  ]
+                                     )
+        """
+
+        plot_save = self.plot_save_folder + '/resolution/time_delta/'
+        Path(plot_save).mkdir(parents=True, exist_ok=True)
+        
+        path = plot_save
+        pio.full_figure_for_development(fig, warn=False)
+        fig.write_image(path + file_title + f' ref {ref_channel} board {board}' + '.png')
+        fig.write_image(path + file_title + f' ref {ref_channel} board {board}' + '.pdf')
+        fig.write_image(path + file_title + f' ref {ref_channel} board {board}' + '.svg')
+        fig.write_html(path + file_title + f' ref {ref_channel} board {board}' + '.html')
+
+
+    def resolution_all(self, ref_channel: str=None, file_title: str=None):
+        """
+        Computes and plots the resolution of all board wrt. a given ref_channel. Points are then
+        fitted with the general function sigma_t_fit(). The user must provide a file_title for the plot, related to the 
+        included_runs considered for the resolution.
+        
+        :param ref_channel: reference channel with respect to which the differences are computed
+        :param file_title: name of the file with the saved plot
+        """
+        try:
+            if len(self.included_runs) <= 1:
+                raise ValueError("Need at least two runs to plot a resolution")    
+            for board in self.letters:
+                print(f'Board {board}')
+                self.__resolution_all_single_board(board, ref_channel, file_title)
         except ValueError as e:
             print(e)
             

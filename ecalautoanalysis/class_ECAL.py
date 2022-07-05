@@ -169,6 +169,11 @@ class ECAL:
         fig.add_trace(trace1.data[0]) # plot the DataFrame    
         #fig.update_layout(bargap=0, bargroupgap = 0)
 
+        r = df["hist"].to_numpy() - gaussian(bin_centers, *coeff)
+        dof = len(df["hist"].to_numpy()) - 3 # Number of degrees of freedom = nb data points - nb parameters
+        yerror = np.sqrt(df["hist"].to_numpy())
+        chisq = np.sum([(r[i]/yerror[i])**2 for i in range(len(r)) if yerror[i] != 0]) / dof # Reduced chi squared
+
         if class_type == 'amplitude':
             unit = 'ADC counts'
         else:
@@ -180,7 +185,7 @@ class ECAL:
             amp, mean, sigma = coeff
             fig.add_vline(x=mean, line_dash='dash', line_color='red')
             fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
-            fig.add_annotation(text=f'Mean: {round(mean,2)} {unit},<br>std dev: {round(sigma,2)} {unit}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
+            fig.add_annotation(text=f'Mean: {round(mean,2)} {unit},<br>std dev: {round(sigma,2)} {unit},<br>reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.9, y=0.8, showarrow=False)
         
         else: # if we have more than 3 parameters in coeff, then it means that we work with three gaussians
             d = {'x': bin_centers, 'y': self.__three_gaussians(bin_centers, *coeff)}
@@ -205,7 +210,7 @@ class ECAL:
 
         
     def __plot_variation(self, df: pd.DataFrame=None, variation: str=None,
-                         xlabel: str=None, ylabel: str=None, plot_title: str=None, path: str=None, file_title: str=None):
+                         xlabel: str=None, ylabel: str=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None):
         """
         Plots the variation either over runs or spills of the DataFrame. Title and labels of the axes are included 
         as arguments, as well as the path to the saving folder and the title of the file.
@@ -218,11 +223,18 @@ class ECAL:
         :param path: path to the folder where the plot is saved
         :param file_title: title of the file (figure) saved
         """
-        if variation == 'run':
-            fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
-            fig2 = px.line(data_frame=df, x=variation, y='gain', color='channel')              
+        if variation == 'run' and class_type == 'amplitude':
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            trace1 = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
+            for trace_data in trace1.data:
+                fig.add_trace(trace_data)                       
+            trace2 = px.line(data_frame=df, x=variation, y='gain', color='channel', line_dash_sequence=['dash'])    
+            for trace_data in trace2.data:
+                fig.add_trace(trace_data, secondary_y=True)
 
             xlabel = 'Laser power (au)'
+            fig.update_yaxes(title_text="Gain", secondary_y=True)
+
         else: # variation = 'spill'
             fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
 
@@ -231,13 +243,6 @@ class ECAL:
                          yaxis_title=ylabel,
                          font = dict(size=18),
                          margin=dict(l=30, r=20, t=50, b=20))
-
-        if variation == 'run':
-            fig2.update_layout(title={'text': 'Gain over runs', 'y':0.98, 'x':0.5, 'xanchor': 'center'},
-                 xaxis_title=xlabel,
-                 yaxis_title='Gain',
-                 font = dict(size=18),
-                 margin=dict(l=30, r=20, t=50, b=20))
 
         # Change ticks of x-axis depending on variation
         if variation == 'spill':
@@ -253,22 +258,13 @@ class ECAL:
                 #print(tick_list) # TODO: remove
        
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
-            fig2.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
-        
+            
         # Save the figures
         pio.full_figure_for_development(fig, warn=False)
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title +'.svg')
-        fig.write_html(path + file_title + '.html')
-
-        if variation == 'run':
-            pio.full_figure_for_development(fig2, warn=False)
-            fig2.write_image(path + file_title + ' gain' + '.png')
-            fig2.write_image(path + file_title + ' gain' + '.pdf')
-            fig2.write_image(path + file_title + ' gain' +'.svg')
-            fig2.write_html(path + file_title + ' gain' + '.html')
-    
+        fig.write_html(path + file_title + '.html')  
     
     def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None):
         """
