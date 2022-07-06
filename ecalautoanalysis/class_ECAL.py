@@ -171,8 +171,13 @@ class ECAL:
         #fig.update_layout(bargap=0, bargroupgap = 0)
         
         # Compute reduced chi2
-        r = df["hist"].to_numpy() - gaussian(bin_centers, *coeff)
-        dof = len(df["hist"].to_numpy()) - 3 # Number of degrees of freedom = nb data points - nb parameters
+        if len(coeff) == 3:
+            r = df["hist"].to_numpy() - gaussian(bin_centers, *coeff)
+            dof = len(df["hist"].to_numpy()) - 3 # Number of degrees of freedom = nb data points - nb parameters
+        else:
+            r = df["hist"].to_numpy() - self.__three_gaussians(bin_centers, *coeff)
+            dof = len(df["hist"].to_numpy()) - 5 # Number of degrees of freedom = nb data points - nb parameters
+
         yerror = np.sqrt(df["hist"].to_numpy())
         chisq = np.sum([(r[i]/yerror[i])**2 for i in range(len(r)) if yerror[i] != 0]) / dof # Reduced chi squared
         # Get correct units

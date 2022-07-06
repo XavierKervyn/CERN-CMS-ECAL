@@ -58,8 +58,8 @@ spill_i_ = 3
 #print("\n----- Histograms (spill) -----\n")
 #t.hist(ref_channel=ref_channel_, all_channels=all_channels_, variation='spill', spill_i=spill_i_)
 
-print("\n----- Run variation -----\n")
-t.run_variation(ref_channel_, all_channels_, file_title='4board')
+#print("\n----- Run variation -----\n")
+#t.run_variation(ref_channel_, all_channels_, file_title='4board')
 
 #print("\n----- run colormesh -----\n")
 #t.run_colormesh(ref_channel_)
@@ -67,6 +67,6 @@ t.run_variation(ref_channel_, all_channels_, file_title='4board')
 #print("\n----- Resolution -----\n")
 #t.resolution(ref_channel_, '4boards')
 
-#print("\n----- Resolution all -----\n")
-#t.resolution_all(ref_channel_, '4boards')
+print("\n----- Resolution all -----\n")
+t.resolution_all(ref_channel_, '4boards')
 
