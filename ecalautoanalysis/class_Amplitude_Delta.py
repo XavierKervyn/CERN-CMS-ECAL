@@ -507,6 +507,8 @@ class Amplitude_Delta(ECAL):
         ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Board {board}, ref {ref_channel}, mean amplitude delta over runs'
         
+        file_title += f' board {board}'
+
         plot_save = self.plot_save_folder + '/run_variation/amplitude_delta/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
         super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title)

@@ -980,7 +980,7 @@ class Time_Delta(ECAL):
         """ 
         
         # add title and label
-        plot_title = f"Time delta absolute resolution, ref {ref_channel}, channel {channel}"
+        plot_title = f"Time delta absolute resolution, ref {ref_channel}, board {board}"
         xlabel = "Average amplitude A (ADC counts)"
         ylabel = "Absolute time resolution (ps)"
         
