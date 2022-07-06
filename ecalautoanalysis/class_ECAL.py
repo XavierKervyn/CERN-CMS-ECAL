@@ -176,7 +176,7 @@ class ECAL:
         yerror = np.sqrt(df["hist"].to_numpy())
         chisq = np.sum([(r[i]/yerror[i])**2 for i in range(len(r)) if yerror[i] != 0]) / dof # Reduced chi squared
         # Get correct units
-        if class_type == 'amplitude' or class_type == 'amplitude_delta:
+        if class_type == 'amplitude' or class_type == 'amplitude_delta':
             unit = 'ADC counts'
         else:
             unit = 'ps'
