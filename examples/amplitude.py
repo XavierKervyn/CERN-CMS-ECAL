@@ -59,9 +59,9 @@ a.run_variation('4boards')
 #print("\n----- Run colormesh -----\n")
 #a.run_colormesh()
 
-print("\n----- Resolution -----\n")
-a.resolution('4boards')
+#print("\n----- Resolution -----\n")
+#a.resolution('4boards')
 
-print("\n----- Resolution all -----\n")
-a.resolution_all('4boards')
+#print("\n----- Resolution all -----\n")
+#a.resolution_all('4boards')
 
