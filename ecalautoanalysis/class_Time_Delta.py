@@ -40,7 +40,7 @@ class Time_Delta(ECAL):
                  save_folder: str = save_folder_global, raw_data_folder: str = raw_data_folder_global,
                  plot_save_folder: str = plot_save_folder_global, checked: bool=False):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
-        self.n_bins = 100 # number of bins for the histogram plots
+        self.n_bins = 1000 # number of bins for the histogram plots
 
     
     # ------------------------------------------------------------------------------------------------------------------------------
