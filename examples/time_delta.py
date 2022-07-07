@@ -52,14 +52,14 @@ spill_i_ = 3
 #print("\n----- Histograms (None) -----\n")
 #t.hist(ref_channel_, all_channels_, fit_option=None)
 
-print("\n----- Histograms (gaussians) -----\n")
-t.hist(ref_channel_, all_channels_, fit_option='gaussians')
+#print("\n----- Histograms (gaussians) -----\n")
+#t.hist(ref_channel_, all_channels_, fit_option='gaussians')
 
 #print("\n----- Histograms (spill) -----\n")
 #t.hist(ref_channel=ref_channel_, all_channels=all_channels_, variation='spill', spill_i=spill_i_)
 
-print("\n----- Run variation -----\n")
-t.run_variation(ref_channel_, all_channels_, file_title='4board')
+#print("\n----- Run variation -----\n")
+#t.run_variation(ref_channel_, all_channels_, file_title='4board')
 
 #print("\n----- run colormesh -----\n")
 #t.run_colormesh(ref_channel_)

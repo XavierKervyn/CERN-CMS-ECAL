@@ -837,7 +837,8 @@ class Time_Delta(ECAL):
                               title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                               font = dict(size=18),
                               margin=dict(l=30, r=20, t=50, b=20))
-            
+
+            """
             # button to change scale of the axis on html figure
             fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
                                            dict(
@@ -855,7 +856,7 @@ class Time_Delta(ECAL):
                                                )
                                           ]
                              )
-
+            """
             plot_save = self.plot_save_folder + '/resolution/time_delta/'
             Path(plot_save).mkdir(parents=True, exist_ok=True)
             
@@ -991,7 +992,7 @@ class Time_Delta(ECAL):
                           margin=dict(l=30, r=20, t=50, b=20))
 
         # button to change scale of the axis on html figure
-
+        """
         fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
                                        dict(
                                            buttons = [
@@ -1008,7 +1009,7 @@ class Time_Delta(ECAL):
                                            )
                                       ]
                          )
-
+        """
         plot_save = self.plot_save_folder + '/resolution/time_delta/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
         

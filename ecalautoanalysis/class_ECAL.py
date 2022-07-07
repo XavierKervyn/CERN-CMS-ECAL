@@ -264,6 +264,13 @@ class ECAL:
                          yaxis_title=ylabel,
                          font = dict(size=18),
                          margin=dict(l=30, r=20, t=50, b=20))
+        if variation == 'run' and class_type == 'amplitude':
+            board = df['channel'][0][0] # Access board letter
+            ratio_title = f'Board {board}, mean amplitude ratio with respect to {board}1'
+            fig2.update_layout(title={'text': ratio_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
+                             xaxis_title=xlabel,
+                             font = dict(size=18),
+                             margin=dict(l=30, r=20, t=50, b=20))
 
         # Change ticks of x-axis depending on variation
         if variation == 'spill':
