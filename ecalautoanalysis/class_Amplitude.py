@@ -16,6 +16,8 @@ def sigma_amp_fit(A: float=None, *p: tuple) -> float:
     :return: Value of the function at A with parameters N, s, and c
     """
     N, s, c = p
+    #s = 0    
+    #N, c = p
     return np.sqrt( (N/A)**2 + (s**2/A) + c**2 )
 
 """
@@ -86,6 +88,11 @@ class Amplitude(ECAL):
             slicing = [channel for channel in self.channel_names if channel[0] == board]
             amp = h2['amp_max'] # retrieve the amplitude in the .root file
             amp_pd = pd.DataFrame(amp, columns=self.channel_names)[slicing]
+               
+            # remove rightmost values     
+            for channel in slicing:
+                amp_pd = amp_pd[(amp_pd[channel] < 40000)]
+                #amp_pd = amp_pd[(amp_pd[channel] > 100)]
 
             # Get gain
             gain = h2['gain']
@@ -203,19 +210,25 @@ class Amplitude(ECAL):
                     bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
                     # fitting process: give a good guess
-                    mean_guess = np.average(bin_centers, weights=hist) # alternatively: mean_guess = bin_centers[np.argmax(hist)]
+                    mean_guess = np.maximum(0, np.average(bin_centers, weights=hist)) # alternatively: mean_guess = bin_centers[np.argmax(hist)]
                     sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
                     guess = [np.max(hist), mean_guess, sigma_guess]
                     print("channel", channel)
 
                     # fit the histogram with a gaussian
                     try:
-                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                        bound = ([0, 0, 0], [np.inf, 30000, 30000])
+                        coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000, bounds=bound)
                     except RuntimeError as e:
                         print(e)
                         print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
                         coeff = guess
-                        covar = np.zeros((3,3))               
+                        covar = np.zeros((3,3))
+                    except ValueError as e:
+                        print(e)
+                        print(f"Fit param unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
+                        coeff = guess
+                        covar = np.zeros((3,3))                  
 
                     # get the statistics from the fit, store them in the arrays
                     mu = coeff[1]
@@ -516,17 +529,26 @@ class Amplitude(ECAL):
         for single_run in self.included_runs:
             gain_df = pd.read_csv(self.save_folder + f'/Run {single_run}' + f'/Run gain board {board}.csv')
             gain_column += list(gain_df.iloc[0])[1:]
+        
         # Generating the plot
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked, 'gain': gain_column})
+        
+        mean_ratio = mean / mean[:,0].reshape(len(mean[:,0]), 1)
+        sigma_ratio = mean_ratio * ( np.abs(sigma[:,0] / mean[:,0]).reshape(len(sigma[:,0]), 1) + np.abs(sigma / mean))
+
+        mean_ratio = mean_ratio.flatten()
+        sigma_ratio = sigma_ratio.flatten()
+
+        plot_ratio = pd.DataFrame({"run": run_column, "channel": channel_column, "ratio": mean_ratio, "error": sigma_ratio})
         
         xlabel = 'Run'
         ylabel = 'Amplitude (ADC counts)'
         plot_title = f'Board {board}, mean amplitude over runs'
         file_title = file_title + f' board {board}' # Add board to file title
-        
+
         plot_save = self.plot_save_folder + '/run_variation/amplitude/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
-        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title, 'amplitude')
+        super()._ECAL__plot_variation(plot_df, 'run', xlabel, ylabel, plot_title, plot_save, file_title, 'amplitude', plot_ratio)
     
 
     def run_variation(self, file_title: str=None):
@@ -610,7 +632,8 @@ class Amplitude(ECAL):
         for j, channel in enumerate([board+number for number in self.numbers]):
 
             yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
-            guess = [1, 2, 0.02] # TODO: change?
+            guess = [1e-5, 2, 0.02] # TODO: change?
+            #guess = [30, 0.02] # TODO: change
 
             # Mask for the plot because data doesn't fit the model for high amplitudes
             mask = (A_lst[:,j] > 0) & (A_lst[:,j] < 10000) 
@@ -637,7 +660,9 @@ class Amplitude(ECAL):
             chisq = np.sum((r/yerror)**2) / dof # Reduced chi squared
 
             # Printing the coefficients in the fit
-            fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s={round(coeff[1],2)} ADC^1/2, <br> c={round(coeff[2],2)}<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False)
+            fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s={round(coeff[1],2)} ADC^1/2, <br> c={round(coeff[2],2)}<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False) 
+            #fig.add_annotation(text=f'Parameters: <br> N={round(coeff[0],2)} ADC counts, <br> s=0 ADC^1/2, <br> c={round(coeff[1],2)}<br>Reduced chi squared: {round(chisq,0)}', xref='x domain', yref='y domain', x=0.4, y=0.8, xanchor='left', align='left', showarrow=False) 
+
 
             plot_title = f"Amplitude relative resolution, channel {channel}"
             xlabel = "Average amplitude (ADC count)"
@@ -647,6 +672,10 @@ class Amplitude(ECAL):
                               title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                               font = dict(size=18),
                               margin=dict(l=30, r=20, t=50, b=20))
+
+            # TODO: remove and put button
+            fig.update_yaxes(type='log')
+            fig.update_xaxes(type='log')
             """
                         fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
                                                        dict(
@@ -770,6 +799,10 @@ class Amplitude(ECAL):
                           title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                           font = dict(size=18),
                           margin=dict(l=30, r=20, t=50, b=20))
+
+        # TODO: remove and put button
+        fig.update_yaxes(type='log')
+        fig.update_xaxes(type='log')
         """
                     fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
                                                    dict(

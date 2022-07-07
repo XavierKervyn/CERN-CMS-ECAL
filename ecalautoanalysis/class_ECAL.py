@@ -217,7 +217,7 @@ class ECAL:
 
         
     def __plot_variation(self, df: pd.DataFrame=None, variation: str=None,
-                         xlabel: str=None, ylabel: str=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None):
+                         xlabel: str=None, ylabel: str=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None, df_ratio: pd.DataFrame=None):
         """
         Plots the variation either over runs or spills of the DataFrame. Title and labels of the axes are included 
         as arguments, as well as the path to the saving folder and the title of the file.
@@ -242,7 +242,18 @@ class ECAL:
                 fig.add_trace(trace_data, secondary_y=True)
 
             xlabel = 'Laser power (au)'
+            fig.add_hline(y=4000, line_width=2, line_dash="dash", line_color="black")
             fig.update_yaxes(title_text="Gain", secondary_y=True)
+
+
+            # ratio plot
+            fig2 = make_subplots(specs=[[{"secondary_y": False}]])
+            trace1bis = px.line(data_frame=df_ratio, x=variation, y='ratio', error_y="error", color='channel')
+            for trace_data in trace1bis.data:
+                fig2.add_trace(trace_data)                       
+
+            fig2.update_yaxes(title_text="Amplitude ratio to first channel", secondary_y=False) 
+
 
         else: # variation = 'spill' or class_type not 'amplitude'
             fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
@@ -266,6 +277,9 @@ class ECAL:
                         tick_list[i] = ''
        
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
+
+            if class_type == 'amplitude':
+                fig2.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
             
         # Save the figures
         pio.full_figure_for_development(fig, warn=False)
@@ -274,6 +288,13 @@ class ECAL:
         fig.write_image(path + file_title +'.svg')
         fig.write_html(path + file_title + '.html')  
     
+        if variation == 'run' and class_type == 'amplitude':
+            pio.full_figure_for_development(fig2, warn=False)
+            fig2.write_image(path + file_title + ' ratio.png')
+            fig2.write_image(path + file_title + ' ratio.pdf')
+            fig2.write_image(path + file_title +' ratio.svg')
+            fig2.write_html(path + file_title + ' ratio.html')
+
     def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None):
         """
         Plots a 2D colormesh map of the mean of a given quantity (amplitude, amplitude difference, time difference) over all channels

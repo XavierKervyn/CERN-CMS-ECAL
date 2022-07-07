@@ -40,7 +40,7 @@ class Time_Delta(ECAL):
                  save_folder: str = save_folder_global, raw_data_folder: str = raw_data_folder_global,
                  plot_save_folder: str = plot_save_folder_global, checked: bool=False):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
-        self.n_bins = 1000 # number of bins for the histogram plots
+        self.n_bins = 100 # number of bins for the histogram plots
 
     
     # ------------------------------------------------------------------------------------------------------------------------------
@@ -217,7 +217,7 @@ class Time_Delta(ECAL):
                                 # fitting process with multiple gaussians
                                 amp_guess = np.max(hist)
                                 mean_guess = np.average(bin_centers, weights=hist)
-                                sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
+                                sigma_guess = self.clock-period/2 *1000 #np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
                                 guess = [amp_guess, mean_guess, sigma_guess, amp_guess, amp_guess]
                                 
                                 try:
@@ -290,6 +290,8 @@ class Time_Delta(ECAL):
                     sigma_arr = np.zeros(len(self.numbers))
                     sigma_error_arr = np.zeros(len(self.numbers))
 
+                    period_ps = self.clock_period*1000 # Clock period in ps
+
                     for i, channel in enumerate(slicing):
                         if channel == ref_channel:
                             continue
@@ -299,13 +301,14 @@ class Time_Delta(ECAL):
 
                         if fit_option == 'synchronise' or fit_option == None:
                             # fitting process with one gaussian
-                            mean_guess = np.average(bin_centers, weights=hist)
-                            sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
+                            mean_guess = bin_centers[np.argmax(hist)] # np.average(bin_centers, weights=hist)
+                            sigma_guess = period_ps/50 #np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
                             guess = [np.max(hist), mean_guess, sigma_guess]
 
                             try:
-                                coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                                bound = ([0, mean_guess-period_ps/4, 0], [np.inf, mean_guess+period_ps/4, period_ps]) # TODO: propagate to spill histograms
+                                coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000, bounds=bound)
                             
                             except RuntimeError as e:
                                 print(e)
@@ -321,19 +324,18 @@ class Time_Delta(ECAL):
                         else: # fitting process with multiple gaussians
                             
                             # Mask so that we only consider bins in a range of (-2periods, 2periods)
-                            period_ps = self.clock_period*1000
                             mask = np.abs(bin_centers) < 2*period_ps
                             bin_centers = bin_centers[mask]
                             hist = hist[mask]
                             
                             amp_guess = np.max(hist)
-                            mean_guess = np.average(bin_centers, weights=hist)
-                            sigma_guess = np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
+                            mean_guess = bin_centers[np.argmax(hist)]#np.average(bin_centers, weights=hist)
+                            sigma_guess = period_ps/40 #np.sqrt(np.average((bin_centers - mean_guess) ** 2, weights=hist))
 
                             guess = (amp_guess, mean_guess, sigma_guess, amp_guess, amp_guess)
             
                             try:
-                                bound = ([-np.inf, -period_ps, -np.inf, -np.inf, -np.inf], [np.inf, period_ps, np.inf, np.inf, np.inf])
+                                bound = ([0, mean_guess - period_ps/4, 0, 0, 0], [np.inf,  mean_guess + period_ps/4, period_ps, np.inf, np.inf]) # TODO: propagate to spill histograms
                                 coeff, covar = curve_fit(f=super()._ECAL__three_gaussians, xdata=bin_centers, ydata=hist, p0=guess, maxfev=5000, bounds=bound)
 
                             except RuntimeError as e:
@@ -855,6 +857,9 @@ class Time_Delta(ECAL):
                                                       ]
                                          )
             """
+            # TODO: remove and put button
+            fig.update_yaxes(type='log')
+            fig.update_xaxes(type='log')
 
             plot_save = self.plot_save_folder + '/resolution/time_delta/'
             Path(plot_save).mkdir(parents=True, exist_ok=True)
@@ -989,7 +994,10 @@ class Time_Delta(ECAL):
                           title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                           font = dict(size=18),
                           margin=dict(l=30, r=20, t=50, b=20))
-        
+
+        # TODO: remove and put button
+        fig.update_yaxes(type='log')
+        fig.update_xaxes(type='log')
         # button to change scale of the axis on html figure
         """
                     fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog

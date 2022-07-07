@@ -44,20 +44,20 @@ spill_i_ = 3
 
 # methods (uncomment)
 
-print("\n----- Spill variation -----\n")
-a.spill_variation()
+#print("\n----- Spill variation -----\n")
+#a.spill_variation()
 
-print("\n----- Histograms (synchronise) -----\n")
-a.hist()
+#print("\n----- Histograms -----\n")
+#a.hist()
 
-print("\n----- Histograms (spill) -----\n")
-a.hist(variation='spill', spill_i=spill_i_)
+#print("\n----- Histograms (spill) -----\n")                                                    
+#a.hist(variation='spill', spill_i=spill_i_)
 
 print("\n----- Run variation -----\n")
 a.run_variation('4boards')
 
-print("\n----- Run colormesh -----\n")
-a.run_colormesh()
+#print("\n----- Run colormesh -----\n")
+#a.run_colormesh()
 
 print("\n----- Resolution -----\n")
 a.resolution('4boards')

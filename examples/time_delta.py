@@ -64,8 +64,8 @@ spill_i_ = 3
 #print("\n----- run colormesh -----\n")
 #t.run_colormesh(ref_channel_)
 
-#print("\n----- Resolution -----\n")
-#t.resolution(ref_channel_, '4boards')
+print("\n----- Resolution -----\n")
+t.resolution(ref_channel_, '4boards')
 
 print("\n----- Resolution all -----\n")
 t.resolution_all(ref_channel_, '4boards')

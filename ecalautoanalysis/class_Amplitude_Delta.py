@@ -503,7 +503,7 @@ class Amplitude_Delta(ECAL):
         
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
         
-        xlabel = 'Run'
+        xlabel = 'Laser power (au)'#'Run'
         ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Board {board}, ref {ref_channel}, mean amplitude delta over runs'
         

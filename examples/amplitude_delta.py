@@ -34,17 +34,17 @@ spill_i_ = 3
 
 # methods
 
-#print("\n----- Spill variation -----\n")
-#ad.spill_variation(ref_channel_, all_channels_)
+print("\n----- Spill variation -----\n")
+ad.spill_variation(ref_channel_, all_channels_)
 
-#print("\n----- Histograms (synchronise) -----\n")
-#ad.hist(ref_channel_, all_channels_)
+print("\n----- Histograms (synchronise) -----\n")
+ad.hist(ref_channel_, all_channels_)
 
-#print("\n----- Histograms (spill) -----\n")
-#ad.hist(ref_channel=ref_channel_, all_channels=all_channels_, variation='spill', spill_i=spill_i_)
+print("\n----- Histograms (spill) -----\n")
+ad.hist(ref_channel=ref_channel_, all_channels=all_channels_, variation='spill', spill_i=spill_i_)
 
 print("\n----- Run variation -----\n")
 ad.run_variation(ref_channel_, all_channels_, '4boards')
 
-#print("\n----- Run colormesh -----\n")
-#ad.run_colormesh(ref_channel_)
+print("\n----- Run colormesh -----\n")
+ad.run_colormesh(ref_channel_)
