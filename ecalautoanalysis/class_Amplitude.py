@@ -16,8 +16,6 @@ def sigma_amp_fit(A: float=None, *p: tuple) -> float:
     :return: Value of the function at A with parameters N, s, and c
     """
     N, s, c = p
-    #s = 0    
-    #N, c = p
     return np.sqrt( (N/A)**2 + (s**2/A) + c**2 )
 
 """
@@ -632,8 +630,7 @@ class Amplitude(ECAL):
         for j, channel in enumerate([board+number for number in self.numbers]):
 
             yerror = sigma_lst[:,j]/A_lst[:,j] * np.sqrt( (A_err_lst[:,j]/A_lst[:,j])**2 + (sigma_err_lst[:,j]/sigma_lst[:,j])**2 )
-            guess = [1e-5, 2, 0.02] # TODO: change?
-            #guess = [30, 0.02] # TODO: change
+            guess = [30, 2, 0.02]
 
             # Mask for the plot because data doesn't fit the model for high amplitudes
             mask = (A_lst[:,j] > 0) & (A_lst[:,j] < 10000) 
@@ -673,27 +670,24 @@ class Amplitude(ECAL):
                               font = dict(size=18),
                               margin=dict(l=30, r=20, t=50, b=20))
 
-            # TODO: remove and put button
-            fig.update_yaxes(type='log')
-            fig.update_xaxes(type='log')
-            """
-                        fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
-                                                       dict(
-                                                           buttons = [
-                                                                       dict(label="Linear",
-                                                                            method="relayout",
-                                                                            args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
-                                                                       dict(label="Semilog y",
-                                                                            method="relayout",
-                                                                            args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
-                                                                       dict(label="Loglog",
-                                                                            method="relayout",
-                                                                            args=[{"yaxis.type": "log", "xaxis.type": "log"}])
-                                                                     ]
-                                                           )
-                                                      ]
-                                         )
-            """
+
+            fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
+                                           dict(
+                                               buttons = [
+                                                           dict(label="Linear",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                           dict(label="Semilog y",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                           dict(label="Loglog",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                         ]
+                                               )
+                                          ]
+                             )
+
             # Saving the figures
             plot_save = self.plot_save_folder + '/resolution/amplitude/'
             Path(plot_save).mkdir(parents=True, exist_ok=True)
@@ -761,7 +755,7 @@ class Amplitude(ECAL):
             plot_df = pd.concat([plot_df, df_data], axis=0)
             
             # Guess for the fit
-            guess = [1, 2, 0.02] # TODO: change?
+            guess = [30, 2, 0.02]
             # Mask for the plot because data doesn't fit the model for high amplitudes
             mask = df_data["x"] > 0 & (df_data["x"] < 10000)
 
@@ -800,27 +794,23 @@ class Amplitude(ECAL):
                           font = dict(size=18),
                           margin=dict(l=30, r=20, t=50, b=20))
 
-        # TODO: remove and put button
-        fig.update_yaxes(type='log')
-        fig.update_xaxes(type='log')
-        """
-                    fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
-                                                   dict(
-                                                       buttons = [
-                                                                   dict(label="Linear",
-                                                                        method="relayout",
-                                                                        args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
-                                                                   dict(label="Semilog y",
-                                                                        method="relayout",
-                                                                        args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
-                                                                   dict(label="Loglog",
-                                                                        method="relayout",
-                                                                        args=[{"yaxis.type": "log", "xaxis.type": "log"}])
-                                                                 ]
-                                                       )
-                                                  ]
-                                     )
-        """
+        fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
+                                       dict(
+                                           buttons = [
+                                                       dict(label="Linear",
+                                                            method="relayout",
+                                                            args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                       dict(label="Semilog y",
+                                                            method="relayout",
+                                                            args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                       dict(label="Loglog",
+                                                            method="relayout",
+                                                            args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                     ]
+                                           )
+                                      ]
+                         )
+
         # Saving the figures
         plot_save = self.plot_save_folder + '/resolution/amplitude/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
