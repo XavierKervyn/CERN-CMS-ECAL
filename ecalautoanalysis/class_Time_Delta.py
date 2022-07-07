@@ -116,6 +116,7 @@ class Time_Delta(ECAL):
         :param spill_index: integer corresponding to the spill to consider, eg. 3 for the third one.
         :param fit_option: if 'synchronise' or 'None', the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.
         """
+        period_ps = self.clock_period*1000 # Clock period in ps
         try:
             if ref_channel not in self.channel_names:
                 raise ValueError("Reference channel must be in the channel list")
@@ -203,7 +204,8 @@ class Time_Delta(ECAL):
                                 guess = [np.max(hist), mean_guess, sigma_guess]
                                 
                                 try:
-                                    coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
+                                    bound = ([0, mean_guess-period_ps/4, 0], [np.inf, mean_guess+period_ps/4, period_ps])
+                                    coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000, bounds=bound)
                                 except RuntimeError as e:
                                     print(e)
                                     print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")
@@ -221,7 +223,8 @@ class Time_Delta(ECAL):
                                 guess = [amp_guess, mean_guess, sigma_guess, amp_guess, amp_guess]
                                 
                                 try:
-                                    coeff, covar = curve_fit(super()._ECAL__three_gaussians, bin_centers, hist, p0=guess, maxfev=5000)
+                                    bound = ([0, mean_guess-period_ps/4, 0], [np.inf, mean_guess+period_ps/4, period_ps])
+                                    coeff, covar = curve_fit(super()._ECAL__three_gaussians, bin_centers, hist, p0=guess, maxfev=5000, bounds=bound)
                                 except RuntimeError as e:
                                     print(e)
                                     print(f"Fit with three gaussians unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")
@@ -290,8 +293,6 @@ class Time_Delta(ECAL):
                     sigma_arr = np.zeros(len(self.numbers))
                     sigma_error_arr = np.zeros(len(self.numbers))
 
-                    period_ps = self.clock_period*1000 # Clock period in ps
-
                     for i, channel in enumerate(slicing):
                         if channel == ref_channel:
                             continue
@@ -307,7 +308,7 @@ class Time_Delta(ECAL):
                             guess = [np.max(hist), mean_guess, sigma_guess]
 
                             try:
-                                bound = ([0, mean_guess-period_ps/4, 0], [np.inf, mean_guess+period_ps/4, period_ps]) # TODO: propagate to spill histograms
+                                bound = ([0, mean_guess-period_ps/4, 0], [np.inf, mean_guess+period_ps/4, period_ps])
                                 coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=5000, bounds=bound)
                             
                             except RuntimeError as e:
@@ -335,7 +336,7 @@ class Time_Delta(ECAL):
                             guess = (amp_guess, mean_guess, sigma_guess, amp_guess, amp_guess)
             
                             try:
-                                bound = ([0, mean_guess - period_ps/4, 0, 0, 0], [np.inf,  mean_guess + period_ps/4, period_ps, np.inf, np.inf]) # TODO: propagate to spill histograms
+                                bound = ([0, mean_guess - period_ps/4, 0, 0, 0], [np.inf,  mean_guess + period_ps/4, period_ps, np.inf, np.inf])
                                 coeff, covar = curve_fit(f=super()._ECAL__three_gaussians, xdata=bin_centers, ydata=hist, p0=guess, maxfev=5000, bounds=bound)
 
                             except RuntimeError as e:
@@ -671,7 +672,7 @@ class Time_Delta(ECAL):
         plot_df = pd.DataFrame(
             {"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
 
-        xlabel = 'Laser power (au)' #TODO: change back to run
+        xlabel = 'Laser power (au)' #TODO: change back to run if necessary
         ylabel = 'Time delta (ps)'
         plot_title = f'Board {board}, ref {ref_channel}, mean time delta over runs'
         file_title = file_title + f' board {board}' # Add board to file title        
@@ -725,7 +726,6 @@ class Time_Delta(ECAL):
         run_save = self.save_folder + '/Run ' + str(run_name) + '/'
         Path(run_save).mkdir(parents=True, exist_ok=True)
 
-        # TODO: do we also want to plot sigma, mu_err, sigma_err?
         mean = np.zeros((len(self.numbers), len(self.letters)))
         for i, board in enumerate(self.letters):
             run_time_df = self.__load_stats(single_run, board, ref_channel, 'run', fit_option)
@@ -839,27 +839,22 @@ class Time_Delta(ECAL):
                               margin=dict(l=30, r=20, t=50, b=20))
             
             # button to change scale of the axis on html figure
-            """
-                        fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
-                                                       dict(
-                                                           buttons = [
-                                                                       dict(label="Linear",
-                                                                            method="relayout",
-                                                                            args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
-                                                                       dict(label="Semilog y",
-                                                                            method="relayout",
-                                                                            args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
-                                                                       dict(label="Loglog",
-                                                                            method="relayout",
-                                                                            args=[{"yaxis.type": "log", "xaxis.type": "log"}])
-                                                                     ]
-                                                           )
-                                                      ]
-                                         )
-            """
-            # TODO: remove and put button
-            fig.update_yaxes(type='log')
-            fig.update_xaxes(type='log')
+            fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
+                                           dict(
+                                               buttons = [
+                                                           dict(label="Linear",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                           dict(label="Semilog y",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                           dict(label="Loglog",
+                                                                method="relayout",
+                                                                args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                         ]
+                                               )
+                                          ]
+                             )
 
             plot_save = self.plot_save_folder + '/resolution/time_delta/'
             Path(plot_save).mkdir(parents=True, exist_ok=True)
@@ -995,28 +990,24 @@ class Time_Delta(ECAL):
                           font = dict(size=18),
                           margin=dict(l=30, r=20, t=50, b=20))
 
-        # TODO: remove and put button
-        fig.update_yaxes(type='log')
-        fig.update_xaxes(type='log')
         # button to change scale of the axis on html figure
-        """
-                    fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
-                                                   dict(
-                                                       buttons = [
-                                                                   dict(label="Linear",
-                                                                        method="relayout",
-                                                                        args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
-                                                                   dict(label="Semilog y",
-                                                                        method="relayout",
-                                                                        args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
-                                                                   dict(label="Loglog",
-                                                                        method="relayout",
-                                                                        args=[{"yaxis.type": "log", "xaxis.type": "log"}])
-                                                                 ]
-                                                       )
-                                                  ]
-                                     )
-        """
+
+        fig.update_layout(updatemenus=[ # add the option to change the scale of the axis to linear, semilogy or loglog
+                                       dict(
+                                           buttons = [
+                                                       dict(label="Linear",
+                                                            method="relayout",
+                                                            args=[{"yaxis.type": "linear", "xaxis.type": "linear"}]),
+                                                       dict(label="Semilog y",
+                                                            method="relayout",
+                                                            args=[{"yaxis.type": "log", "xaxis.type": "linear"}]),
+                                                       dict(label="Loglog",
+                                                            method="relayout",
+                                                            args=[{"yaxis.type": "log", "xaxis.type": "log"}])
+                                                     ]
+                                           )
+                                      ]
+                         )
 
         plot_save = self.plot_save_folder + '/resolution/time_delta/'
         Path(plot_save).mkdir(parents=True, exist_ok=True)
