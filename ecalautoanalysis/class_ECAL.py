@@ -12,7 +12,6 @@ from scipy.optimize import curve_fit
 from decimal import *
 from pathlib import Path
 from typing import *
-
 import plotly.io as pio
 
 """ Global variables """
@@ -52,16 +51,15 @@ class ECAL:
     def __init__(self, included_runs: List[int]=None, letters: List[str]=None, 
                  save_folder: str=save_folder_global, raw_data_folder: str=raw_data_folder_global, 
                  plot_save_folder: str=plot_save_folder_global, checked: bool=False):
+        
+        # class attributes
         self.save_folder = save_folder
         self.raw_data_folder = raw_data_folder
         self.plot_save_folder = plot_save_folder
-
         self.numbers = ['1', '2', '3', '4', '5'] # The five channels on each board
-        self.included_runs = included_runs
-        self.included_runs.sort() # Sorting the run names
+        self.included_runs = included_runs; self.included_runs.sort() # Sorting the run names
         self.letters = letters
         self.clock_period = 6.238  # nanoseconds
-        #self.n_bins = 0 # placeholder for n_bins in child classes
 
         # define channel_names, the access to the 'mesh' with the letters and the numbers
         self.channel_names = []
@@ -132,12 +130,11 @@ class ECAL:
         
         :return: sum of three gaussians evaluated at the point x, with period self.clock_period
         """
-
-        A1, mu1, sigma1, A2, A3 = p # get the coefficients
+        A1, mu1, sigma1, A2, A3 = p # get the coefficients, the gaussians have the same std deviations
         coeff1 = (A1, mu1, sigma1)
         coeff2 = (A2, mu1+self.clock_period*1000, sigma1)
         coeff3 = (A3, mu1-self.clock_period*1000, sigma1)
-        # the gaussians have the same std deviations
+        
         return gaussian(x, *coeff1) + gaussian(x, *coeff2) + gaussian(x, *coeff3) 
        
         
@@ -159,28 +156,27 @@ class ECAL:
         :param class_type: either 'amplitude', 'time_delta' or 'amplitude_delta'
         :param *coeff: pointer to the coefficients computed with the (multiple) gaussian(s) fit
         """
-        # Plotting the data
-        #trace1 = px.histogram(df, x=channel, nbins=2*self.n_bins)
+        # create histogram with the correct features
         trace1 = px.bar(df, x='bin_centers', y='hist')
         bin_width = (np.max(bin_centers) - np.min(bin_centers)) / len(bin_centers)
         trace1.update_traces(width=bin_width)
         trace1.update_traces(marker=dict(line=dict(width=0)))
-        #trace1.update_traces(width=bin_width, marker_line_width=0, selector=dict(type="bar"))
+        
+        # create figure
         fig = make_subplots(specs=[[{"secondary_y": False}]])
-        fig.add_trace(trace1.data[0]) # plot the DataFrame    
-        #fig.update_layout(bargap=0, bargroupgap = 0)
+        fig.add_trace(trace1.data[0]) # plot the hisotgram    
         
         # Compute reduced chi2
-        if len(coeff) == 3:
+        if len(coeff) == 3: # if only one gaussian
             r = df["hist"].to_numpy() - gaussian(bin_centers, *coeff)
             dof = len(df["hist"].to_numpy()) - 3 # Number of degrees of freedom = nb data points - nb parameters
-        else:
+        else: # if three gaussians
             r = df["hist"].to_numpy() - self.__three_gaussians(bin_centers, *coeff)
             dof = len(df["hist"].to_numpy()) - 5 # Number of degrees of freedom = nb data points - nb parameters
-
         yerror = np.sqrt(df["hist"].to_numpy())
         chisq = np.sum([(r[i]/yerror[i])**2 for i in range(len(r)) if yerror[i] != 0]) / dof # Reduced chi squared
-        # Get correct units
+        
+        # Get correct units for labels
         if class_type == 'amplitude' or class_type == 'amplitude_delta':
             unit = 'ADC counts'
         else:
@@ -188,7 +184,6 @@ class ECAL:
         
         if len(coeff) == 3: # if we only have a gaussian
             d = {'x': bin_centers, 'y': gaussian(bin_centers, *coeff)}
-
             amp, mean, sigma = coeff
             fig.add_vline(x=mean, line_dash='dash', line_color='red')
             fig.add_vrect(x0=mean-sigma, x1=mean+sigma, line_width=0, fillcolor='red', opacity=0.2)
@@ -197,18 +192,19 @@ class ECAL:
         else: # if we have more than 3 parameters in coeff, then it means that we work with three gaussians
             d = {'x': bin_centers, 'y': self.__three_gaussians(bin_centers, *coeff)}
         
-        # Ploting the fit
+        # Plotting the fit
         fit_pd = pd.DataFrame(data=d)
         trace2 = px.line(fit_pd, x='x', y='y', color_discrete_sequence=['red'])
         fig.add_trace(trace2.data[0], secondary_y=False) # plot the fit
 
+        # polish figure
         fig.update_layout(title={'text': hist_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                          xaxis_title=xlabel,
                          yaxis_title=ylabel,
                          font = dict(size=18),
                          margin=dict(l=30, r=20, t=50, b=20))
         
-        # Save the figures
+        # save the figure
         pio.full_figure_for_development(fig, warn=False)
         fig.write_image(path + file_title + '.png')
         fig.write_image(path + file_title + '.pdf')
@@ -219,8 +215,7 @@ class ECAL:
     def __plot_variation(self, df: pd.DataFrame=None, variation: str=None,
                          xlabel: str=None, ylabel: str=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None, df_ratio: pd.DataFrame=None):
         """
-        Plots the variation either over runs or spills of the DataFrame. Title and labels of the axes are included 
-        as arguments, as well as the path to the saving folder and the title of the file.
+        Plots the variation either over runs or spills of the DataFrame. Title and labels of the axes are included as arguments, as well as the path to the saving folder and the title of the file. Also plots the ratio of the amplitude of each channel to the first channel in the board in a separate figure to showcase linearity.
         
         :param df: DataFrame containing the data to be plotted
         :param variation: either 'run' (histograms are computed over a full run) or 'spill' (separately for each spill in single_run).
@@ -235,37 +230,40 @@ class ECAL:
         # In the case of run amplitude variation, we also want to plot the gain to see at which point it switches from 1 to 10
         if variation == 'run' and class_type == 'amplitude':
             fig = make_subplots(specs=[[{"secondary_y": True}]])
+            
+            # trace for the mean amplitudes for each channel
             trace1 = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
             for trace_data in trace1.data:
                 fig.add_trace(trace_data)                       
+            
+            # trace for the gain for each channel
             trace2 = px.line(data_frame=df, x=variation, y='gain', color='channel', line_dash_sequence=['dash'])    
             for trace_data in trace2.data:
                 fig.add_trace(trace_data, secondary_y=True)
 
-            xlabel = 'Laser power (au)'
+            # add horizontal line to see where gain switch happens
             fig.add_hline(y=4000, line_width=2, line_dash="dash", line_color="black")
             fig.update_yaxes(title_text="Gain", secondary_y=True)
-
 
             # ratio plot
             fig2 = make_subplots(specs=[[{"secondary_y": False}]])
             trace1bis = px.line(data_frame=df_ratio, x=variation, y='ratio', error_y="error", color='channel')
             for trace_data in trace1bis.data:
                 fig2.add_trace(trace_data)                       
-
             fig2.update_yaxes(title_text="Amplitude ratio to first channel", secondary_y=False) 
-
 
         else: # variation = 'spill' or class_type not 'amplitude'
             fig = px.line(data_frame=df, x=variation, y='mean', error_y="sigma", color='channel')
 
+        # polish the figure
         fig.update_layout(title={'text': plot_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                          xaxis_title=xlabel,
                          yaxis_title=ylabel,
                          font = dict(size=18),
                          margin=dict(l=30, r=20, t=50, b=20))
+        
         if variation == 'run' and class_type == 'amplitude':
-            board = df['channel'][0][0] # Access board letter
+            board = df['channel'][0][0] # access board letter
             ratio_title = f'Board {board}, mean amplitude ratio with respect to {board}1'
             fig2.update_layout(title={'text': ratio_title, 'y':0.98, 'x':0.5, 'xanchor': 'center'},
                              xaxis_title=xlabel,
@@ -276,17 +274,15 @@ class ECAL:
         if variation == 'spill':
             fig.update_layout(xaxis= dict(tickmode='linear', tick0=1, dtick=1))
         else:
-            #tick_list = [str(run) for run in self.included_runs]
-            tick_list = list(np.arange(140, 232, 2)) # Input power instead of run number
+            tick_list = [str(run) for run in self.included_runs] # should be changed if one wants LASER power instead of run number
 
-            if len(self.included_runs) > 10: # if too many runs, do not show xtick for each run
+            if len(self.included_runs) > 10: # if too many runs, do not show xtick for each run since overlap otherwise
                 for i in range(len(tick_list)):
                     if i%4 != 0:
                         tick_list[i] = ''
        
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
-            # Also set xticks for ratio plot
-            if class_type == 'amplitude':
+            if class_type == 'amplitude': # also set xticks for ratio plot if needed
                 fig2.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
             
         # Save the figures
@@ -304,6 +300,7 @@ class ECAL:
             fig2.write_image(path + file_title +' ratio.svg')
             fig2.write_html(path + file_title + ' ratio.html')
 
+            
     def __plot_colormesh(self, mean: np.array=None, plot_title: str=None, path: str=None, file_title: str=None, class_type: str=None):
         """
         Plots a 2D colormesh map of the mean of a given quantity (amplitude, amplitude difference, time difference) over all channels
@@ -321,6 +318,7 @@ class ECAL:
         indices = list(reversed(self.numbers))
         mean_df.index = indices
         
+        # correct units for labels
         if class_type == 'amplitude':
             unit = 'ADC counts'
         else:
@@ -343,5 +341,3 @@ class ECAL:
         fig.write_image(path + file_title + '.pdf')
         fig.write_image(path + file_title + '.svg')
         fig.write_html(path + file_title + '.html')
-
-        

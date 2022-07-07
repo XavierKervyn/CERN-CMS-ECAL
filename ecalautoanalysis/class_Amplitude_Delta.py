@@ -6,9 +6,7 @@ from .class_ECAL import *
         
 class Amplitude_Delta(ECAL):
     """
-    This class is for the analysis of the amplitude difference between the channels of the detector.
-    
-    With a given list of self.included_runs and a reference_channel, one can plot amplitude delta histograms, variation of the amplitude delta over runs, colormeshes over the channels, as well as the relative amplitude resolution using the public methods.
+    This class is for the analysis of the amplitude difference between the channels of the detector. With a given list of self.included_runs and a reference_channel, one can plot amplitude delta histograms, variation of the amplitude delta over runs, colormeshes over the channels, as well as the relative amplitude resolution using the public methods. It has the number of bins to be used in the histograms as an attribute.
     
     :param included_runs: list of all the numbers corresponding to the runs to be analyzed
     :param letters: list of all the letters corresponding to the boards connected for the included_runs
@@ -22,7 +20,6 @@ class Amplitude_Delta(ECAL):
                  plot_save_folder: str=plot_save_folder_global, checked: bool=False):
         super().__init__(included_runs, letters, save_folder, raw_data_folder, plot_save_folder, checked)
         
-        # class attribute
         self.n_bins = 50
     
     
@@ -54,7 +51,7 @@ class Amplitude_Delta(ECAL):
             curr_amp = amp_pd[channel]
             amp_delta = curr_amp - reference_amp
 
-            # Save amplitude deltas for later analysis
+            # save amplitude deltas for later analysis
             amp_delta_pd[f'{channel}'] = amp_delta
             
         return amp_delta_pd
@@ -63,14 +60,14 @@ class Amplitude_Delta(ECAL):
     def __generate_stats(self, single_run: int=None, board: str=None, ref_channel: str=None, 
                          variation: str='run', plot: bool=False, spill_index: int=None):
         """ 
-        Generates the statistics for a given board in a run, either when analyzing spills or runs. Can also plot the histogram of the data.
-        Statistics of the amplitude delta Gaussian fit (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
+        Generates the statistics for a given board in a run, either when analyzing spills or runs. Can also plot the histogram of the data. Statistics of the amplitude delta Gaussian fit (mean, mean error, sigma, sigma error) are then saved in .csv files for later use.
         
         :param single_run: number associated with the run to be analyzed, eg. 15610
         :param board: board to be analyzed with the run, eg. 'C'
         :param ref_channel: name of the channel to be taken as a reference, eg. 'A1'
         :param variation: ('run' or 'spill') computing the statistics per run or spill
         :param plot: boolean. If True, the histogram of the data is plotted.
+        :param spill_index: index of the spill if one wants to analyse a single spill (ex: 3)
         """
         try:
             if ref_channel not in self.channel_names:
@@ -131,7 +128,7 @@ class Amplitude_Delta(ECAL):
 
                     for j, spill in enumerate(spill_set):
                         aspill_pd_temp = aspill_pd[aspill_pd.spill_nb == spill]
-
+                        # compute the time delta
                         amp_delta_pd = self.__compute_delta(aspill_pd_temp, board, ref_channel)
 
                         # 'empty' arrays to store the statistics of each channel
@@ -152,14 +149,16 @@ class Amplitude_Delta(ECAL):
                             mean_guess = np.average(bin_centers, weights=hist)
                             sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
 
-                            guess = [np.max(hist), mean_guess, sigma_guess]
+                            guess = [np.max(hist), mean_guess, sigma_guess] # suitable first guess
+                            
                             try:
                                 coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
                             except RuntimeError as e:
                                 print(e)
-                                print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
+                                print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")               
                                 coeff = guess
                                 covar = np.zeros((3,3))  
+                            
                             mu = coeff[1]
                             mu_error = np.sqrt(covar[1,1])
                             sigma = coeff[2]
@@ -225,14 +224,14 @@ class Amplitude_Delta(ECAL):
                             continue
 
                         hist, bin_edges = np.histogram(amp_delta_pd[channel], bins = self.n_bins)
-
                         bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2)  
 
                         # fitting process
                         mean_guess = np.average(bin_centers, weights=hist)
                         sigma_guess = np.sqrt(np.average((bin_centers - mean_guess)**2, weights=hist))
 
-                        guess = [np.max(hist), mean_guess, sigma_guess]
+                        guess = [np.max(hist), mean_guess, sigma_guess] # suitable first guess
+                        
                         try:
                             coeff, covar = curve_fit(gaussian, bin_centers, hist, p0=guess, maxfev=10000)
                         except RuntimeError as e:
@@ -240,6 +239,7 @@ class Amplitude_Delta(ECAL):
                             print(f"Fit unsuccessful, arbitrary coefficients set to {guess} and covariance matrix to 0.")                   
                             coeff = guess
                             covar = np.zeros((3,3))  
+                        
                         mu = coeff[1]
                         mu_error = np.sqrt(covar[1,1])
                         sigma = coeff[2]
@@ -288,7 +288,6 @@ class Amplitude_Delta(ECAL):
         :return: pd.DataFrame (one if variation='run', four if variation='spill') with the statistics
         """
         try: # check if the file exists
-            
             if variation=='spill': # returns a tuple with the 4 files
                 return (pd.read_csv(self.save_folder 
                                     + f'/Run {single_run}' 
@@ -308,7 +307,6 @@ class Amplitude_Delta(ECAL):
                                    + f'/Run amplitude delta run {single_run} board {board} ref {ref_channel}.csv')   
             
         except FileNotFoundError:
-   
             print('File not found, generating .csv')
             self.__generate_stats(single_run, board, ref_channel, variation) # generating the statistics file
         
@@ -503,7 +501,7 @@ class Amplitude_Delta(ECAL):
         
         plot_df = pd.DataFrame({"run": run_column, "channel": channel_column, "mean": mean_stacked, "sigma": sigma_stacked})
         
-        xlabel = 'Laser power (au)'#'Run'
+        xlabel = 'Run'
         ylabel = 'Amplitude delta (ADC counts)'
         plot_title = f'Board {board}, ref {ref_channel}, mean amplitude delta over runs'
         
