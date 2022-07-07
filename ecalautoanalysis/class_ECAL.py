@@ -230,6 +230,7 @@ class ECAL:
         :param path: path to the folder where the plot is saved
         :param file_title: title of the file (figure) saved
         :param class_type: either 'amplitude', 'time_delta' or 'amplitude_delta'
+        :param df_ratio: dataframe with the ratio of the amplitudes used with variation='run' and class_type='amplitude'
         """
         # In the case of run amplitude variation, we also want to plot the gain to see at which point it switches from 1 to 10
         if variation == 'run' and class_type == 'amplitude':
@@ -277,7 +278,7 @@ class ECAL:
                         tick_list[i] = ''
        
             fig.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
-
+            # Also set xticks for ratio plot
             if class_type == 'amplitude':
                 fig2.update_layout(xaxis= dict(tickmode='array', tickvals=np.arange(len(self.included_runs)), ticktext=tick_list))
             
@@ -288,6 +289,7 @@ class ECAL:
         fig.write_image(path + file_title +'.svg')
         fig.write_html(path + file_title + '.html')  
     
+        # If run variation of amplitude, also plot the ratio of the amplitudes with respect to channel 1 of the board
         if variation == 'run' and class_type == 'amplitude':
             pio.full_figure_for_development(fig2, warn=False)
             fig2.write_image(path + file_title + ' ratio.png')
