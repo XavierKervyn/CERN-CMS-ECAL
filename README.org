@@ -1,17 +1,21 @@
-# CERN-CMS-ECAL
-Code to analyse the prototype of CMS ECAL for the upcoming high luminosity LHC upgrade. Studies the amplitude, the amplitude difference and the time difference between signals in the channels of the detector. Built as a Python package, 'ecalautoanalysis', with three main classes to use: Amplitude, Amplitude_Delta and Time_Delta, each being subclasses of ECAL.
+* CERN-CMS-ECAL data analysis automation package
+This package was created to analyse the data of the prototype of CMS ECAL for the upcoming high luminosity LHC upgrade. It is able to study the amplitude, the amplitude difference and the time difference between signals in the channels of the detector. The code is structured as a Python package, 'ecalautoanalysis', with three main classes: =Amplitude=, =Amplitude_Delta= and =Time_Delta=, each being subclasses of =ECAL=.
 
 To install the package and its dependencies, type
 
+#+BEGIN_EXAMPLE
 pip install -I .
+#+END_EXAMPLE
 
-within the CERN-CMS-ECAL folder in a command line. After modifications of the code, the package must be re-loaded for them to be effective. To avoid loading all the dependencies again, type
+within the =CERN-CMS-ECAL= folder in a command line. After modifications of the code, the package must be re-loaded for them to be effective. To avoid loading all the dependencies again, type
 
+#+BEGIN_EXAMPLE
 pip install -I --no-deps .
+#+END_EXAMPLE
 
-instead. The subfolder "examples" contain different python scripts with the different methods implemented for each class for testing purposes. Calling one of these methods will result in the creation of a folder "Statistics" containing the .csv files with the data retrieved/computed in the code, as well as a folder "Plots" with the different plots in format .html, .svg, .pdf and .png.
+instead. The subfolder =examples= contain different python scripts with the different methods implemented for each class for testing purposes. Calling one of these methods will result in the creation of a folder =Statistics= containing the =.csv= files with the data retrieved/computed in the code, as well as a folder =Plots= with the different plots in format =.html=, =.svg=, =.pdf= and =.png=.
 
-When changing the fitting method (eg. from 'synchronise' to 'gaussian'), one must make sure that the previous "Statistics" folder is either empty or inexistent. Otherwise, the code will just load the data and not re-generate them to save computation time. 
+When changing the fitting method (e.g. from ='synchronise'= to ='gaussian'=), one must make sure that the previous =Statistics= folder is either empty or inexistent. Otherwise, the code will just load the data and not re-generate them to save computation time. 
 
 The main implementation choices that one could modify are listed below:
 - for Amplitude: 
