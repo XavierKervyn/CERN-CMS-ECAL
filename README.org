@@ -15,7 +15,7 @@ pip install -I --no-deps .
 
 instead. The subfolder =examples= contain different python scripts with the different methods implemented for each class for testing purposes. Calling one of these methods will result in the creation of a folder =Statistics= containing the =.csv= files with the data retrieved/computed in the code, as well as a folder =Plots= with the different plots in format =.html=, =.svg=, =.pdf= and =.png=.
 
-When changing the fitting method (e.g. from ="synchronise"= to ="gaussian"=), one must make sure that the previous =Statistics= folder is either empty or inexistent. Otherwise, the code will just load the data and not re-generate them to save computation time. 
+When changing the fitting method (e.g. from =synchronise= to =gaussian=), one must make sure that the previous =Statistics= folder is either empty or inexistent. Otherwise, the code will just load the data and not re-generate them to save computation time. 
 
 The main implementation choices that one could modify are listed below:
 - for Amplitude: 
