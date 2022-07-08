@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to ecalautoanalysis’s documentation!</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/epub.css" type="text/css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-ecalautoanalysis-s-documentation">
+<h1>Welcome to ecalautoanalysis’s documentation!</h1>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+<div class="section" id="ecal-analysis">
+<h1>ECAL Analysis</h1>
+<dl class="py class">
+<dt id="ecalautoanalysis.ECAL">
+<em class="property">class </em><code class="sig-prename descclassname">ecalautoanalysis.</code><code class="sig-name descname">ECAL</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">included_runs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">letters</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">save_folder</span><span class="o">=</span><span class="default_value">'Statistics'</span></em>, <em class="sig-param"><span class="n">raw_data_folder</span><span class="o">=</span><span class="default_value">'/eos/home-s/spigazzi/Lab21/data/Reco/'</span></em>, <em class="sig-param"><span class="n">plot_save_folder</span><span class="o">=</span><span class="default_value">'Plots'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_ECAL.xhtml#ECAL"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>This class is the parent class of Amplitude, Time_Delta and Amplitude_Delta. It contains the attributes and methods 
+that are to be inherited to the entire code structure. This class should be understood as ‘virtual’, in the sense that
+it is not possible to have an instance of ECAL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>included_runs</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]) – run numbers to be analysed, eg. [15610, 15611]</p></li>
+<li><p><strong>letters</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]) – corresponding to the boards connected, eg. [‘A’, ‘B’, ‘D’]</p></li>
+<li><p><strong>save_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – folder where the computed data should be stored</p></li>
+<li><p><strong>raw_data_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – folder where the raw experiment data is located</p></li>
+<li><p><strong>plot_save_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – folder where the plots are saved</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="ecalautoanalysis.Amplitude">
+<em class="property">class </em><code class="sig-prename descclassname">ecalautoanalysis.</code><code class="sig-name descname">Amplitude</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">included_runs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">letters</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">save_folder</span><span class="o">=</span><span class="default_value">'Statistics'</span></em>, <em class="sig-param"><span class="n">raw_data_folder</span><span class="o">=</span><span class="default_value">'/eos/home-s/spigazzi/Lab21/data/Reco/'</span></em>, <em class="sig-param"><span class="n">plot_save_folder</span><span class="o">=</span><span class="default_value">'Plots'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>This class is for the analysis of the amplitudes.</p>
+<p>With a given list of self.included_runs, one can plot amplitude histograms, variation of the amplitude over runs, colormeshes over the channels, as well as the relative amplitude resolution using the public methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>included_runs</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]) – list of all the numbers (int) corresponding to the runs to be analyzed, eg. [15610, 15611]</p></li>
+<li><p><strong>letters</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]) – list of all the boards (str) connected for the included_runs, eg. [‘A’, ‘B’, ‘D’]</p></li>
+<li><p><strong>save_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – local path to the folder where files will be saved</p></li>
+<li><p><strong>raw_data_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – local path to the folder where the data from DQM is sent</p></li>
+<li><p><strong>plot_save_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – local path to the folder where the plots can be saved</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.get_mean">
+<code class="sig-name descname">get_mean</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.get_mean"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter method for the mean of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the mean amplitude for each of the channels in the board.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number associated with the run to be analyzed, eg. 15610</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board to be analyzed with the run, eg. ‘C’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pandas.core.series.Series containing the mean of the amplitude for each of the channels in the board</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.get_mean_err">
+<code class="sig-name descname">get_mean_err</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.get_mean_err"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter method for the error on the mean of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the error on the mean amplitude for each of the channels in the board.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number associated with the run to be analyzed, eg. 15610</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board to be analyzed with the run, eg. ‘C’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pandas.core.series.Series containing the error on the mean of the amplitude for each of the channels in the board</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.get_sigma">
+<code class="sig-name descname">get_sigma</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.get_sigma"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter method for the standard deviation of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the standard deviation amplitude for each of the channels in the board.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number associated with the run to be analyzed, eg. 15610</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board to be analyzed with the run, eg. ‘C’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pandas.core.series.Series containing the standard deviation of the amplitude for each of the channels in the board</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.get_sigma_err">
+<code class="sig-name descname">get_sigma_err</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.get_sigma_err"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter method for the error on the standard deviation of the amplitude Gaussian fit for the channels in the board in the single_run. Returns a container with the error on the standard deviation amplitude for each of the channels in the board.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number associated with the run to be analyzed, eg. 15610</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board to be analyzed with the run, eg. ‘C’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pandas.core.series.Series containing the error on the standard deviation of the amplitude for each of the channels in the board</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.hist">
+<code class="sig-name descname">hist</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">variation</span><span class="o">=</span><span class="default_value">'run'</span></em>, <em class="sig-param"><span class="n">spill_i</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.hist"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Computes the statistics and plots the corresponding histograms for every single_run in self.included_runs and channels in self.channel_names.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – either “run” or “spill”. If variation is “run”, then the histograms contain all the events in the run considered. If variation is “spill”, the histogram contains the events in the spill_i of the run considered.</p></li>
+<li><p><strong>spill_i</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – index of the spill to be considered in the case variation=”spill”</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.resolution">
+<code class="sig-name descname">resolution</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.resolution"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots for each channels in self.channel_names the relative amplitude resolution as a function of the amplitude.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.run_colormesh">
+<code class="sig-name descname">run_colormesh</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.run_colormesh"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the colormesh map with the mean amplitude over self.channel_names for every single_run in self.included_runs.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.run_variation">
+<code class="sig-name descname">run_variation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.run_variation"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the evolution of the mean amplitude over every single_run in self.included_runs.
+Warning: included_runs must be at least of length two.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude.spill_variation">
+<code class="sig-name descname">spill_variation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude.xhtml#Amplitude.spill_variation"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the amplitude per spill for all the runs in self.included_runs (loops on all the single_runs)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="ecalautoanalysis.Amplitude_Delta">
+<em class="property">class </em><code class="sig-prename descclassname">ecalautoanalysis.</code><code class="sig-name descname">Amplitude_Delta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">included_runs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">letters</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">save_folder</span><span class="o">=</span><span class="default_value">'Statistics'</span></em>, <em class="sig-param"><span class="n">raw_data_folder</span><span class="o">=</span><span class="default_value">'/eos/home-s/spigazzi/Lab21/data/Reco/'</span></em>, <em class="sig-param"><span class="n">plot_save_folder</span><span class="o">=</span><span class="default_value">'Plots'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude_Delta.xhtml#Amplitude_Delta"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>This class is for the analysis of the amplitude difference between the channels of the detector.</p>
+<p>With a given list of self.included_runs and a reference_channel, one can plot amplitude delta histograms, variation of the amplitude delta over runs, colormeshes over the channels, as well as the relative amplitude resolution using the public methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>included_runs</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]) – list of all the numbers corresponding to the runs to be analyzed</p></li>
+<li><p><strong>letters</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]) – list of all the letters corresponding to the boards connected for the included_runs</p></li>
+<li><p><strong>save_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – local path to the folder where files will be saved</p></li>
+<li><p><strong>raw_data_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – local path to the folder where the data from DQM is sent</p></li>
+<li><p><strong>plot_save_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – local path to the folder where the plots can be saved</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude_Delta.get_mean">
+<code class="sig-name descname">get_mean</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude_Delta.xhtml#Amplitude_Delta.get_mean"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter method for the mean of the amplitude delta Gaussian fit for the channels in the board with respect to the ref_channel in the single_run. Returns a container with the mean amplitude deltas for each of the channels in the board.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number associated with the run to be analyzed, eg. 15610</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board to be analyzed with the run, eg. ‘C’</p></li>
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – name of the channel to be taken as a reference, eg. ‘A1’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pandas.core.series.Series containing the mean of the amplitude delta for each of the channels in the board with respect to the ref_channel</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude_Delta.hist">
+<code class="sig-name descname">hist</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">all_channels</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">variation</span><span class="o">=</span><span class="default_value">'run'</span></em>, <em class="sig-param"><span class="n">spill_i</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude_Delta.xhtml#Amplitude_Delta.hist"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Generate the statistics and plots the histogram of the amplitude delta of all the channels considered for all the runs in self.included_runs. The delta is taken with respect to the ref_channel for every single run in self.included_runs.
+Does it either for all channels self.channel_names or only for those in the board to which ref_channel belongs.
+If variation is “run”, then the histograms contain all the events in the single_run. If variation is “spill”, the histogram contains the events in the spill_i of the single_run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – name of the channel to be taken as a reference, eg. ‘A1’</p></li>
+<li><p><strong>all_channels</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>]) – plotting either for all channels self.channel_names or only for those in the board to which ref_channel belongs</p></li>
+<li><p><strong>variation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – either “run” or “spill”. If variation is “run”, then the histograms contain all the events in the single_run. If variation is “spill”, the histogram contains the events in the spill_i of the single_run.</p></li>
+<li><p><strong>spill_i</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – index of the spill to be considered in the case variation=”spill”</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude_Delta.run_colormesh">
+<code class="sig-name descname">run_colormesh</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude_Delta.xhtml#Amplitude_Delta.run_colormesh"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the colormesh map with the mean amplitude over self.channel_names for every single_run in self.included_runs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – name of the channel to be taken as a reference, eg. ‘A1’</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude_Delta.run_variation">
+<code class="sig-name descname">run_variation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">all_channels</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude_Delta.xhtml#Amplitude_Delta.run_variation"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots evolution of the mean amplitude over self.included_runs for a given reference channel
+Does it either for all channels self.channel_names or only for those in the board to which ref_channel belongs</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – name of the channel to be taken as a reference, eg. ‘A1’</p></li>
+<li><p><strong>all_channels</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>]) – plotting either for all channels self.channel_names or only for those in the board to which ref_channel belongs</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Amplitude_Delta.spill_variation">
+<code class="sig-name descname">spill_variation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">all_channels</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Amplitude_Delta.xhtml#Amplitude_Delta.spill_variation"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the evolution of the amplitude delta per spill for all the single runs in self.included_runs.
+The delta is taken wrt. the reference channel ref_channel.
+If all_channels is true, the plot is done for all other channels in self.channel_names.
+Otherwise, the plot is done for all channels in the board corresponding to the reference channel, eg. ‘A’ if ref_channel = ‘A1’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – name of the channel to be taken as a reference, eg. ‘A1’</p></li>
+<li><p><strong>all_channels</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>]) – plotting either for all channels self.channel_names or only for those in the board to which ref_channel belongs</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="ecalautoanalysis.Time_Delta">
+<em class="property">class </em><code class="sig-prename descclassname">ecalautoanalysis.</code><code class="sig-name descname">Time_Delta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">included_runs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">letters</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">save_folder</span><span class="o">=</span><span class="default_value">'Statistics'</span></em>, <em class="sig-param"><span class="n">raw_data_folder</span><span class="o">=</span><span class="default_value">'/eos/home-s/spigazzi/Lab21/data/Reco/'</span></em>, <em class="sig-param"><span class="n">plot_save_folder</span><span class="o">=</span><span class="default_value">'Plots'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>This class serves for the analysis of the time resolution of the detector. It has a few general private methods 
+to synchronise the different times, compute the time difference between two channels, generate the statistics
+of the data, load the data, as well as a few public getters for the mean and the standard deviation of the time delta
+and their respective errors. The other sets of metods either analyse the spills, the runs, plot colormesh of the statistics
+or study the time resolution of the system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>included_runs</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]) – the list of the runs one wants to consider</p></li>
+<li><p><strong>letters</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – the list of boards</p></li>
+<li><p><strong>save_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – folder where the csv data files are to be saved</p></li>
+<li><p><strong>raw_data_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – folder where the .root input reconstruction files are stored</p></li>
+<li><p><strong>plot_save_folder</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – folder where the plots produced are to be staved</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.get_mean">
+<code class="sig-name descname">get_mean</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.get_mean"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter for the average time difference wrt. to a ref_channel for the entire channels in a board of a single run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – the number of a run, for example ‘15610’</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board considered</p></li>
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>column of the dataframe containing the average time difference for each channel of the board in the rows</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.get_mean_err">
+<code class="sig-name descname">get_mean_err</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.get_mean_err"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter for the error on the average time difference wrt. to a ref_channel for the entire channels in a board of a single run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – the number of a run, for example ‘15610’</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board considered</p></li>
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>column of the dataframe containing the error on the average time difference for each channel of the board in the rows</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.get_sigma">
+<code class="sig-name descname">get_sigma</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.get_sigma"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter for the standard deviation of time difference wrt. to a ref_channel for the entire channels in a board of a single run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – the number of a run, for example ‘15610’</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board considered</p></li>
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>column of the dataframe containing the standard deviation of the time difference for each channel of the board in the rows</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.get_sigma_err">
+<code class="sig-name descname">get_sigma_err</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">single_run</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">board</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.get_sigma_err"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Getter for the error on the std dev of the time difference wrt. to a ref_channel for the entire channels in a board of a single run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>single_run</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – the number of a run, for example ‘15610’</p></li>
+<li><p><strong>board</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – board considered</p></li>
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>column of the dataframe containing the error on the std dev. of the time difference for each channel of the board in the rows</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.hist">
+<code class="sig-name descname">hist</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">all_channels</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">variation</span><span class="o">=</span><span class="default_value">'run'</span></em>, <em class="sig-param"><span class="n">spill_i</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fit_option</span><span class="o">=</span><span class="default_value">'synchronise'</span></em>, <em class="sig-param"><span class="n">nb_fits</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.hist"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with 
+respect to the ref_channel for the single_run considered. The boards considered can either be all of them, or only the 
+one of ref_channel, depending on the value of all_channels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p></li>
+<li><p><strong>all_channels</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>]) – If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.</p></li>
+<li><p><strong>variation</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – either ‘run’ (loads the statistics for the entire run) or ‘spill’ (for each spill).</p></li>
+<li><p><strong>spill_i</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – integer corresponding to the spill to consider, eg. 3 for the third one.</p></li>
+<li><p><strong>fit_option</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – if ‘synchronise’ or ‘None’, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</p></li>
+<li><p><strong>nb_fits</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number of gaussians if fit_option opts for multiple gaussians</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.resolution">
+<code class="sig-name descname">resolution</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.resolution"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Computes and plots the resolution of all board wrt. a given ref_channel. Points are then
+fitted with the general function sigma_t_fit()</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.run_colormesh">
+<code class="sig-name descname">run_colormesh</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fit_option</span><span class="o">=</span><span class="default_value">'synchronise'</span></em>, <em class="sig-param"><span class="n">nb_fits</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.run_colormesh"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots mean mu for the time delta with respect to ref_channel of the runs in self.included_runs in
+colormesh plots. The mesh represents all the channels and the color represents the time delta.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p></li>
+<li><p><strong>fit_option</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – if ‘synchronise’ or ‘None’, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</p></li>
+<li><p><strong>nb_fits</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number of gaussians if fit_option opts for multiple gaussians</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.run_variation">
+<code class="sig-name descname">run_variation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">all_channels</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fit_option</span><span class="o">=</span><span class="default_value">'synchronise'</span></em>, <em class="sig-param"><span class="n">nb_fits</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.run_variation"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the evolution over the runs in self.included_runs of the time delta of the channels with respect to the 
+ref_channel on one or all the boards, depending on the value of all_channels. fit_option and nb_fits allow to 
+choose how the statistics are computed (single or multiple gaussian fits)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p></li>
+<li><p><strong>all_channels</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>]) – If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.</p></li>
+<li><p><strong>fit_option</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – if ‘synchronise’ or ‘None’, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</p></li>
+<li><p><strong>nb_fits</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number of gaussians if fit_option opts for multiple gaussians</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ecalautoanalysis.Time_Delta.spill_variation">
+<code class="sig-name descname">spill_variation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ref_channel</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">all_channels</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fit_option</span><span class="o">=</span><span class="default_value">'synchronise'</span></em>, <em class="sig-param"><span class="n">nb_fits</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ecalautoanalysis/class_Time_Delta.xhtml#Time_Delta.spill_variation"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Plots the evolution over the spills in each of the runs in self.included_runs of the time delta of the channels with respect 
+to the ref_channel on one or all the boards, depending on the value of all_channels. fit_option and nb_fits allow to 
+choose a different way of computing the statistics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref_channel</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – reference channel with respect to which the differences are computed</p></li>
+<li><p><strong>all_channels</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code>]) – True (plots of the time delta evolution with respect to ref_channel for all boards), False (only for the board of ref_channel).</p></li>
+<li><p><strong>fit_option</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>) – if ‘synchronise’ or ‘None’, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</p></li>
+<li><p><strong>nb_fits</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]) – number of gaussians if fit_option opts for multiple gaussians</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables</h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.xhtml"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.xhtml"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.xhtml"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>
