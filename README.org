@@ -1,2 +1,31 @@
 # CERN-CMS-ECAL
-Code to analyse the prototype of CMS ECAL for the upcoming high luminosity LHC upgrade. Computes and plots the time difference between signals in the channels of the detector.
+Code to analyse the prototype of CMS ECAL for the upcoming high luminosity LHC upgrade. Studies the amplitude, the amplitude difference and the time difference between signals in the channels of the detector. Built as a Python package, 'ecalautoanalysis', with three main classes to use: Amplitude, Amplitude_Delta and Time_Delta, each being subclasses of ECAL.
+
+To install the package and its dependencies, type
+
+pip install -I .
+
+within the CERN-CMS-ECAL folder in a command line. After modifications of the code, the package must be re-loaded for them to be effective. To avoid loading all the dependencies again, type
+
+pip install -I --no-deps .
+
+instead. The subfolder "examples" contain different python scripts with the different methods implemented for each class for testing purposes. Calling one of these methods will result in the creation of a folder "Statistics" containing the .csv files with the data retrieved/computed in the code, as well as a folder "Plots" with the different plots in format .html, .svg, .pdf and .png.
+
+When changing the fitting method (eg. from 'synchronise' to 'gaussian'), one must make sure that the previous "Statistics" folder is either empty or inexistent. Otherwise, the code will just load the data and not re-generate them to save computation time. 
+
+The main implementation choices that one could modify are listed below:
+- for Amplitude: 
+    - Discard events with amplitude > 40000 ADC counts when loading
+    - Consider the gain that is the most present for each channel in the run
+    - Mask for fitting in resolution plot, Amplitudes < 10000 ADC counts only. This is rather arbitrary and could be improved by setting the cutoff to the amplitude at which the minimum relative resolution is reached instead.
+    - All parameters for gaussian fit supposed > 0
+
+- for Time Delta:
+    - Discard events for which |𝑡𝑖𝑚𝑒 Δ|>1000 clock periods
+    - Fist guess for fits:
+        Mean: bin_centers[np.argmax(hist)] “position of the maximum time delta in histogram”
+        Sigma: period (ps) / 50
+        Bounds (A, 𝜇, 𝜎) ∈ [0 →∞, mean guess ± period (ps)/4, 0 → period (ps)]
+    - Multiple gaussians: only consider range (-2 periods, + 2 periods).
+
+We invite the user to refer to the online documentation for the different keywords arguments of the methods.
