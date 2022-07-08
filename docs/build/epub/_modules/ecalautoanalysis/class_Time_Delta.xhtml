@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ecalautoanalysis.class_Time_Delta</title>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/epub.css" type="text/css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ecalautoanalysis.class_Time_Delta</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Imports &quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">.class_ECAL</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.class_Amplitude</span> <span class="kn">import</span> <span class="o">*</span> <span class="c1"># this import is needed for the resolution</span>
+
+<span class="sd">&quot;&quot;&quot; General function&quot;&quot;&quot;</span>
+
+<span class="k">def</span> <span class="nf">sigma_t_fit</span><span class="p">(</span><span class="n">A</span><span class="p">:</span> <span class="nb">float</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">p</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Time resolution as a function of the mean amplitude A, with parameters *p to be fitted.</span>
+<span class="sd">    </span>
+<span class="sd">    :param A: point at which we evaluate the expression</span>
+<span class="sd">    :param *p: pointer to the parameters N and c to be fitted</span>
+<span class="sd">    </span>
+<span class="sd">    :return: the time resolution for the given mean amplitude A</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sigma_N</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># TODO: calculate actual pedestal sigma</span>
+    <span class="n">N</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">p</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span> <span class="p">(</span><span class="n">N</span><span class="o">*</span><span class="n">sigma_N</span><span class="o">/</span><span class="n">A</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">c</span><span class="o">**</span><span class="mi">2</span> <span class="p">)</span>
+
+
+<span class="sd">&quot;&quot;&quot; Child Class definition &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Time_Delta"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta">[docs]</a><span class="k">class</span> <span class="nc">Time_Delta</span><span class="p">(</span><span class="n">ECAL</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class serves for the analysis of the time resolution of the detector. It has a few general private methods </span>
+<span class="sd">    to synchronise the different times, compute the time difference between two channels, generate the statistics</span>
+<span class="sd">    of the data, load the data, as well as a few public getters for the mean and the standard deviation of the time delta</span>
+<span class="sd">    and their respective errors. The other sets of metods either analyse the spills, the runs, plot colormesh of the statistics</span>
+<span class="sd">    or study the time resolution of the system.</span>
+
+<span class="sd">    :param included_runs: the list of the runs one wants to consider</span>
+<span class="sd">    :param letters: the list of boards</span>
+<span class="sd">    :param save_folder: folder where the csv data files are to be saved</span>
+<span class="sd">    :param raw_data_folder: folder where the .root input reconstruction files are stored</span>
+<span class="sd">    :param plot_save_folder: folder where the plots produced are to be staved</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">included_runs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">letters</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">save_folder</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">save_folder_global</span><span class="p">,</span> <span class="n">raw_data_folder</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">raw_data_folder_global</span><span class="p">,</span>
+                 <span class="n">plot_save_folder</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">plot_save_folder_global</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">included_runs</span><span class="p">,</span> <span class="n">letters</span><span class="p">,</span> <span class="n">save_folder</span><span class="p">,</span> <span class="n">raw_data_folder</span><span class="p">,</span> <span class="n">plot_save_folder</span><span class="p">)</span>
+
+    
+    <span class="c1"># ------------------------------------------------------------------------------------------------------------------------------</span>
+    <span class="c1"># GENERAL</span>
+        
+    <span class="k">def</span> <span class="nf">__synchroniser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to remove the period shift.</span>
+<span class="sd">        Collects the scattered peaks separated by integer multiples of the clock period to one large peak.</span>
+
+<span class="sd">        :param value: list of time deltas for a single channel to synchronise</span>
+<span class="sd">        :return: synchronised value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># How far from the center value the synchroniser should start to act. Minimum Value that makes sense physically: 0.5</span>
+        <span class="n">window_leniency</span> <span class="o">=</span> <span class="mf">0.5</span>  
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span> <span class="o">*</span> <span class="n">window_leniency</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">-=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span> <span class="o">*</span> <span class="n">window_leniency</span><span class="p">):</span>
+                <span class="n">value</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">Decimal</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">%</span> <span class="n">Decimal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span><span class="p">))</span>
+
+    
+    <span class="k">def</span> <span class="nf">__compute_time_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                             <span class="n">apply_synchroniser</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the time difference (delta) for a given reference channel versus the channels in the board given as argument.</span>
+
+<span class="sd">        :param time: 2D dataframe containing the time for all the events considered (rows) for the channels with the given board (rows)</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param apply_synchroniser: if one wants to apply the synchronization method or not</span>
+
+<span class="sd">        :return: DataFrame of the time deltas, the columns being the channels and the rows the events</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Rename the column names with the channels in self._channel_names</span>
+        <span class="n">time_pd</span> <span class="o">=</span> <span class="n">time</span>
+        <span class="n">n_numbers</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)</span>
+
+        <span class="n">time_delta_pd</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+        <span class="n">slicing</span> <span class="o">=</span> <span class="p">[</span><span class="n">channel</span> <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="k">if</span> <span class="n">channel</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">board</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">slicing</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">channel</span> <span class="o">==</span> <span class="n">ref_channel</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">reference_time</span> <span class="o">=</span> <span class="n">time_pd</span><span class="p">[</span><span class="n">ref_channel</span><span class="p">]</span>
+            <span class="n">curr_time</span> <span class="o">=</span> <span class="n">time_pd</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span>
+            <span class="n">time_delta</span> <span class="o">=</span> <span class="n">curr_time</span> <span class="o">-</span> <span class="n">reference_time</span>
+
+            <span class="c1"># Remove period shift from the data</span>
+            <span class="k">if</span> <span class="n">apply_synchroniser</span><span class="p">:</span>
+                <span class="n">time_delta</span> <span class="o">=</span> <span class="n">time_delta</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__synchroniser</span><span class="p">)</span>
+
+            <span class="n">time_delta</span> <span class="o">=</span> <span class="n">time_delta</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>  <span class="c1"># convert into picoseconds</span>
+            <span class="n">time_delta_pd</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">channel</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_delta</span> <span class="c1"># Save time deltas for later analysis</span>
+            
+        <span class="k">return</span> <span class="n">time_delta_pd</span>
+
+    
+    <span class="k">def</span> <span class="nf">__generate_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">variation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">spill_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates the histograms of the time delta for a single run and single board and saves the Gaussian curve fit parameters </span>
+<span class="sd">        and errors mu, mu_err, sigma, sigma_err in csv files. If variation=&#39;run&#39;, only one .csv file is created, the columns </span>
+<span class="sd">        being the two fit parameters and their errors and the rows being the channels within the board considered. If variation=&#39;spill&#39;, </span>
+<span class="sd">        four .csv files are created, the columns being the channels within the board considered, and the rows are the different spills </span>
+<span class="sd">        within the single_run. The spill_index argument allows to consider only a given spill and thereby visualize the evolution spill</span>
+<span class="sd">        after spill (useful feature for the DQM system). Finally, fit_option and nb_fits allow to choose a different way of computing the</span>
+<span class="sd">        statistics.</span>
+
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param variation: either &#39;run&#39; (histograms are computed over a full run) or &#39;spill&#39; (separately for each spill in single_run).</span>
+<span class="sd">        :param plot: If True, plots the histograms and fit, not if False</span>
+<span class="sd">        :param spill_index: integer corresponding to the spill to consider, eg. 3 for the third one.</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: create exception for spill_index</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ref_channel</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Reference channel must be in the channel list&quot;</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Computation with merged data: retrieve the amplitude</span>
+                <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data_folder</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">single_run</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">variation</span> <span class="o">==</span> <span class="s1">&#39;spill&#39;</span> <span class="ow">and</span> <span class="n">plot</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="n">h2</span> <span class="o">=</span> <span class="n">uproot</span><span class="o">.</span><span class="n">concatenate</span><span class="p">({</span><span class="n">folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/</span><span class="si">{</span><span class="n">spill_index</span><span class="si">}</span><span class="s1">.root&#39;</span><span class="p">:</span> <span class="s1">&#39;digi&#39;</span><span class="p">},</span> <span class="n">allow_missing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span> <span class="c1"># if variation == &#39;run&#39;</span>
+                    <span class="n">h2</span> <span class="o">=</span> <span class="n">uproot</span><span class="o">.</span><span class="n">concatenate</span><span class="p">({</span><span class="n">folder</span> <span class="o">+</span> <span class="s1">&#39;/*.root&#39;</span><span class="p">:</span> <span class="s1">&#39;digi&#39;</span><span class="p">},</span> <span class="n">allow_missing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">run_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">folder</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Run: &#39;</span><span class="p">,</span> <span class="n">run_name</span><span class="p">)</span>
+                <span class="n">run_save</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="s1">&#39;/Run &#39;</span> <span class="o">+</span> <span class="n">run_name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span>
+                <span class="n">Path</span><span class="p">(</span><span class="n">run_save</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">slicing</span> <span class="o">=</span> <span class="p">[</span><span class="n">channel</span> <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="k">if</span> <span class="n">channel</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">board</span><span class="p">]</span>
+
+                <span class="n">ref_idx</span> <span class="o">=</span> <span class="n">h2</span><span class="p">[</span><span class="n">ref_channel</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">time</span> <span class="o">=</span> <span class="n">h2</span><span class="p">[</span><span class="s1">&#39;time_max&#39;</span><span class="p">]</span>
+                <span class="n">time_pd</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
+
+                <span class="c1"># column header for the Dataframes</span>
+                <span class="n">col_list</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="n">board</span><span class="p">]</span>
+                <span class="n">col_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="n">y</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">col_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)]</span>
+
+                <span class="k">if</span> <span class="n">variation</span> <span class="o">==</span> <span class="s1">&#39;spill&#39;</span><span class="p">:</span>
+                    <span class="c1"># Computation with merged data: retrieve the spill number</span>
+                    <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
+                        <span class="n">h1</span> <span class="o">=</span> <span class="n">uproot</span><span class="o">.</span><span class="n">concatenate</span><span class="p">({</span><span class="n">folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/</span><span class="si">{</span><span class="n">spill_index</span><span class="si">}</span><span class="s1">.root&#39;</span><span class="p">:</span> <span class="s1">&#39;h4&#39;</span><span class="p">},</span> <span class="n">allow_missing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">h1</span> <span class="o">=</span> <span class="n">uproot</span><span class="o">.</span><span class="n">concatenate</span><span class="p">({</span><span class="n">folder</span> <span class="o">+</span> <span class="s1">&#39;/*.root&#39;</span><span class="p">:</span> <span class="s1">&#39;h4&#39;</span><span class="p">},</span> <span class="n">allow_missing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="n">spill</span> <span class="o">=</span> <span class="n">h1</span><span class="p">[</span><span class="s1">&#39;spill&#39;</span><span class="p">]</span>
+                    <span class="n">spill_pd</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">spill</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;spill_nb&quot;</span><span class="p">])</span>
+
+                    <span class="c1"># merge the two Dataframes</span>
+                    <span class="n">tspill_pd</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">time_pd</span><span class="p">,</span> <span class="n">spill_pd</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="s1">&#39;inner&#39;</span><span class="p">)</span>
+
+                    <span class="c1"># create empty arrays to store the statistics</span>
+                    <span class="n">spill_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">tspill_pd</span><span class="p">[</span><span class="s2">&quot;spill_nb&quot;</span><span class="p">])</span>  <span class="c1"># set of unique spill numbers</span>
+                    <span class="n">time_mean_spill</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">spill_set</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+                    <span class="n">time_mean_err_spill</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">spill_set</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+                    <span class="n">time_sigma_spill</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">spill_set</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+                    <span class="n">time_sigma_err_spill</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">spill_set</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+
+                    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">spill</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">spill_set</span><span class="p">):</span>
+                        <span class="n">tspill_pd_temp</span> <span class="o">=</span> <span class="n">tspill_pd</span><span class="p">[</span><span class="n">tspill_pd</span><span class="o">.</span><span class="n">spill_nb</span> <span class="o">==</span> <span class="n">spill</span><span class="p">]</span>
+                        
+                        <span class="k">if</span> <span class="n">fit_option</span> <span class="o">==</span> <span class="s1">&#39;synchronise&#39;</span><span class="p">:</span>
+                            <span class="n">apply_synchroniser</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1"># the time deltas will be synchronized</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">apply_synchroniser</span> <span class="o">=</span> <span class="kc">False</span> 
+                        <span class="n">time_delta_pd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__compute_time_delta</span><span class="p">(</span><span class="n">tspill_pd_temp</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">apply_synchroniser</span><span class="p">)</span>
+
+                        <span class="c1"># &#39;empty&#39; arrays to store the statistics of each channel</span>
+                        <span class="n">mu_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">))</span>
+                        <span class="n">mu_error_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">))</span>
+                        <span class="n">sigma_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">))</span>
+                        <span class="n">sigma_error_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">))</span>
+
+                        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">slicing</span><span class="p">):</span>
+                            <span class="k">if</span> <span class="n">channel</span> <span class="o">==</span> <span class="n">ref_channel</span><span class="p">:</span>
+                                <span class="k">continue</span>
+
+                            <span class="n">hist</span><span class="p">,</span> <span class="n">bin_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">time_delta_pd</span><span class="p">[</span><span class="n">channel</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="mi">1500</span><span class="p">)</span>
+                            <span class="n">bin_centers</span> <span class="o">=</span> <span class="p">((</span><span class="n">bin_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">bin_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+                            
+                            <span class="k">if</span> <span class="n">fit_option</span> <span class="o">==</span> <span class="s1">&#39;synchronise&#39;</span> <span class="ow">or</span> <span class="n">fit_option</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                                <span class="c1"># fitting process with one gaussian</span>
+                                <span class="n">mean_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">bin_centers</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">hist</span><span class="p">)</span>
+                                <span class="n">sigma_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">((</span><span class="n">bin_centers</span> <span class="o">-</span> <span class="n">mean_guess</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">hist</span><span class="p">))</span>
+
+                                <span class="n">guess</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">hist</span><span class="p">),</span> <span class="n">mean_guess</span><span class="p">,</span> <span class="n">sigma_guess</span><span class="p">]</span>
+                                <span class="n">coeff</span><span class="p">,</span> <span class="n">covar</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="n">gaussian</span><span class="p">,</span> <span class="n">bin_centers</span><span class="p">,</span> <span class="n">hist</span><span class="p">,</span> <span class="n">p0</span><span class="o">=</span><span class="n">guess</span><span class="p">,</span> <span class="n">maxfev</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+                                <span class="n">mu</span> <span class="o">=</span> <span class="n">coeff</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                                <span class="n">mu_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+                                <span class="n">sigma</span> <span class="o">=</span> <span class="n">coeff</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                                <span class="n">sigma_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="c1"># fitting process with multiple gaussians</span>
+                                <span class="n">guess</span> <span class="o">=</span> <span class="p">[]</span>
+                                <span class="n">amp_list</span> <span class="o">=</span> <span class="p">[]</span>
+                                <span class="n">mu_list</span> <span class="o">=</span> <span class="p">[]</span>
+                                <span class="n">sigma_list</span> <span class="o">=</span> <span class="p">[]</span>
+                                <span class="n">mu_error_list</span> <span class="o">=</span> <span class="p">[]</span>
+                                <span class="n">sigma_error_list</span> <span class="o">=</span> <span class="p">[]</span>
+                                
+                                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">nb_fits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">nb_fits</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)):</span>
+                                    <span class="n">mean_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">bin_centers</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">hist</span><span class="p">)</span> <span class="o">+</span> <span class="n">k</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span><span class="o">*</span><span class="mi">1000</span>
+                                    <span class="n">sigma_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">((</span><span class="n">bin_centers</span> <span class="o">-</span> <span class="n">mean_guess</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">hist</span><span class="p">))</span>
+                                    <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                        <span class="n">amp_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">hist</span><span class="p">)</span>
+                                    <span class="k">else</span><span class="p">:</span>
+                                        <span class="n">amp_guess</span> <span class="o">=</span> <span class="mi">1</span>
+                                        
+                                    <span class="n">guess</span> <span class="o">+=</span> <span class="p">[</span><span class="n">amp_guess</span><span class="p">,</span> <span class="n">mean_guess</span><span class="p">,</span> <span class="n">sigma_guess</span><span class="p">]</span>
+                                
+                                <span class="n">coeff</span><span class="p">,</span> <span class="n">covar</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="n">multiple_gaussians</span><span class="p">,</span> <span class="n">bin_centers</span><span class="p">,</span> <span class="n">hist</span><span class="p">,</span> <span class="n">p0</span><span class="o">=</span><span class="n">guess</span><span class="p">,</span> <span class="n">maxfev</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span> <span class="c1"># fit the curve</span>
+                                
+                                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">nb_fits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">nb_fits</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)):</span>
+                                    <span class="n">amp_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coeff</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">index</span><span class="p">])</span> 
+                                    <span class="n">mu_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coeff</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">index</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">k</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span><span class="o">*</span><span class="mi">1000</span><span class="p">)</span>
+                                    <span class="n">sigma_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coeff</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">index</span><span class="o">+</span><span class="mi">2</span><span class="p">])</span>
+                                
+                                <span class="n">mu_error_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">[</span><span class="n">m</span><span class="p">,</span><span class="n">m</span><span class="p">])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coeff</span><span class="p">))</span> <span class="k">if</span> <span class="n">m</span><span class="o">%</span><span class="mi">3</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+                                <span class="n">sigma_error_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">[</span><span class="n">m</span><span class="p">,</span><span class="n">m</span><span class="p">])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coeff</span><span class="p">))</span> <span class="k">if</span> <span class="n">m</span><span class="o">%</span><span class="mi">3</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span>
+                                
+                                <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">mu_list</span><span class="p">)</span>
+                                <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">sigma_list</span><span class="p">)</span>
+                                <span class="n">mu_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">mu_error_list</span><span class="p">)</span>
+                                <span class="n">sigma_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">sigma_error_list</span><span class="p">)</span>
+
+                            <span class="n">mu_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu</span>
+                            <span class="n">mu_error_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_error</span>
+                            <span class="n">sigma_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">sigma</span>
+                            <span class="n">sigma_error_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">sigma_error</span>
+
+                            <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>  <span class="c1"># TODO: add path name to save the plots</span>
+                                <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Run: </span><span class="si">{</span><span class="n">run_name</span><span class="si">}</span><span class="s1">, channel: </span><span class="si">{</span><span class="n">board</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">, ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">, spill </span><span class="si">{</span><span class="n">spill</span><span class="si">}</span><span class="s1">&#39;</span>
+                                <span class="n">xlabel</span> <span class="o">=</span> <span class="s1">&#39;Time delta (ps)&#39;</span>
+                                <span class="n">ylabel</span> <span class="o">=</span> <span class="s1">&#39;Occurrence (a.u.)&#39;</span>
+                                <span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                                <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_ECAL__plot_hist</span><span class="p">(</span><span class="n">time_delta_pd</span><span class="p">,</span> <span class="n">channel</span><span class="p">,</span> <span class="n">bin_centers</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">xlabel</span><span class="p">,</span> <span class="n">ylabel</span><span class="p">,</span>
+                                                         <span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="n">coeff</span><span class="p">)</span>
+                                
+                        <span class="n">time_mean_spill</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">mu_arr</span>
+                        <span class="n">time_mean_err_spill</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">mu_error_arr</span>
+                        <span class="n">time_sigma_spill</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">sigma_arr</span>
+                        <span class="n">time_sigma_err_spill</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">sigma_error_arr</span>
+
+                    <span class="c1"># convert the matrices to Dataframes</span>
+                    <span class="n">spill_time_mean_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">time_mean_spill</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col_list</span><span class="p">)</span>
+                    <span class="n">spill_time_mean_err_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">time_mean_err_spill</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col_list</span><span class="p">)</span>
+                    <span class="n">spill_time_sigma_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">time_sigma_spill</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col_list</span><span class="p">)</span>
+                    <span class="n">spill_time_sigma_err_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">time_sigma_err_spill</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">col_list</span><span class="p">)</span>
+
+                    <span class="c1"># save these in .csv files</span>
+                    <span class="n">spill_time_mean_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                              <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill mean time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+                    <span class="n">spill_time_mean_err_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                                  <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill error mean time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+                    <span class="n">spill_time_sigma_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                               <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill sigma time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+                    <span class="n">spill_time_sigma_err_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                                   <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill error sigma time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>  <span class="c1"># variation==&#39;run&#39;:</span>
+                    <span class="k">if</span> <span class="n">fit_option</span> <span class="o">==</span> <span class="s1">&#39;synchronise&#39;</span><span class="p">:</span>
+                        <span class="n">apply_synchroniser</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1"># the time deltas will be synchronized</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">apply_synchroniser</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="n">time_delta_pd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__compute_time_delta</span><span class="p">(</span><span class="n">time_pd</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">apply_synchroniser</span><span class="p">)</span>
+
+                    <span class="c1"># &#39;empty&#39; arrays to store the statistics of each channel</span>
+                    <span class="n">mu_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">))</span>
+                    <span class="n">mu_error_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">))</span>
+                    <span class="n">sigma_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">))</span>
+                    <span class="n">sigma_error_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">))</span>
+
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">slicing</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">channel</span> <span class="o">==</span> <span class="n">ref_channel</span><span class="p">:</span>
+                            <span class="k">continue</span>
+
+                        <span class="n">hist</span><span class="p">,</span> <span class="n">bin_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">time_delta_pd</span><span class="p">[</span><span class="n">channel</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="mi">1500</span><span class="p">)</span>
+                        <span class="n">bin_centers</span> <span class="o">=</span> <span class="p">((</span><span class="n">bin_edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">bin_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+                        <span class="k">if</span> <span class="n">fit_option</span> <span class="o">==</span> <span class="s1">&#39;synchronise&#39;</span> <span class="ow">or</span> <span class="n">fit_option</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="c1"># fitting process with one gaussian</span>
+                            <span class="n">mean_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">bin_centers</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">hist</span><span class="p">)</span>
+                            <span class="n">sigma_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">((</span><span class="n">bin_centers</span> <span class="o">-</span> <span class="n">mean_guess</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">hist</span><span class="p">))</span>
+
+                            <span class="n">guess</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">hist</span><span class="p">),</span> <span class="n">mean_guess</span><span class="p">,</span> <span class="n">sigma_guess</span><span class="p">]</span>
+                            <span class="n">coeff</span><span class="p">,</span> <span class="n">covar</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="n">gaussian</span><span class="p">,</span> <span class="n">bin_centers</span><span class="p">,</span> <span class="n">hist</span><span class="p">,</span> <span class="n">p0</span><span class="o">=</span><span class="n">guess</span><span class="p">,</span> <span class="n">maxfev</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+                            <span class="n">mu</span> <span class="o">=</span> <span class="n">coeff</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                            <span class="n">mu_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+                            <span class="n">sigma</span> <span class="o">=</span> <span class="n">coeff</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                            <span class="n">sigma_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="c1"># fitting process with multiple gaussians</span>
+                            <span class="n">guess</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="n">amp_list</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="n">mu_list</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="n">sigma_list</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="n">mu_error_list</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="n">sigma_error_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+                            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">nb_fits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">nb_fits</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)):</span>
+                                <span class="n">mean_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">bin_centers</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">hist</span><span class="p">)</span> <span class="o">+</span> <span class="n">k</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span><span class="o">*</span><span class="mi">1000</span>
+                                <span class="n">sigma_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">((</span><span class="n">bin_centers</span> <span class="o">-</span> <span class="n">mean_guess</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">hist</span><span class="p">))</span>
+                                <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                    <span class="n">amp_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">hist</span><span class="p">)</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="n">amp_guess</span> <span class="o">=</span> <span class="mi">1</span>
+
+                                <span class="n">guess</span> <span class="o">+=</span> <span class="p">[</span><span class="n">amp_guess</span><span class="p">,</span> <span class="n">mean_guess</span><span class="p">,</span> <span class="n">sigma_guess</span><span class="p">]</span>
+
+                            <span class="n">coeff</span><span class="p">,</span> <span class="n">covar</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="n">multiple_gaussians</span><span class="p">,</span> <span class="n">bin_centers</span><span class="p">,</span> <span class="n">hist</span><span class="p">,</span> <span class="n">p0</span><span class="o">=</span><span class="n">guess</span><span class="p">,</span> <span class="n">maxfev</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+                            
+                            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">nb_fits</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">nb_fits</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)):</span>
+                                <span class="n">amp_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coeff</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">index</span><span class="p">])</span> 
+                                <span class="n">mu_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coeff</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">index</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">k</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">clock_period</span><span class="o">*</span><span class="mi">1000</span><span class="p">)</span>
+                                <span class="n">sigma_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coeff</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">index</span><span class="o">+</span><span class="mi">2</span><span class="p">])</span>
+
+                            <span class="n">mu_error_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">[</span><span class="n">m</span><span class="p">,</span><span class="n">m</span><span class="p">])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coeff</span><span class="p">))</span> <span class="k">if</span> <span class="n">m</span><span class="o">%</span><span class="mi">3</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+                            <span class="n">sigma_error_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">covar</span><span class="p">[</span><span class="n">m</span><span class="p">,</span><span class="n">m</span><span class="p">])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coeff</span><span class="p">))</span> <span class="k">if</span> <span class="n">m</span><span class="o">%</span><span class="mi">3</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span>
+
+                            <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">mu_list</span><span class="p">)</span>
+                            <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">sigma_list</span><span class="p">)</span>
+                            <span class="n">mu_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">mu_error_list</span><span class="p">)</span>
+                            <span class="n">sigma_error</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">sigma_error_list</span><span class="p">)</span>
+                        
+                        <span class="n">mu_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu</span>
+                        <span class="n">mu_error_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mu_error</span>
+                        <span class="n">sigma_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">sigma</span>
+                        <span class="n">sigma_error_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">sigma_error</span>
+    
+                        <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>  <span class="c1"># TODO: add path name to save the plots</span>
+                            <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Run: </span><span class="si">{</span><span class="n">run_name</span><span class="si">}</span><span class="s1">, channel: </span><span class="si">{</span><span class="n">board</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">, ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">&#39;</span>
+                            <span class="n">xlabel</span> <span class="o">=</span> <span class="s1">&#39;Time delta (ps)&#39;</span>
+                            <span class="n">ylabel</span> <span class="o">=</span> <span class="s1">&#39;Occurrence (a.u.)&#39;</span>
+                            <span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                           
+                            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_ECAL__plot_hist</span><span class="p">(</span><span class="n">time_delta_pd</span><span class="p">,</span> <span class="n">channel</span><span class="p">,</span> <span class="n">bin_centers</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">xlabel</span><span class="p">,</span> <span class="n">ylabel</span><span class="p">,</span>
+                                                     <span class="n">path</span><span class="p">,</span> <span class="o">*</span><span class="n">coeff</span><span class="p">)</span>
+
+                    <span class="c1"># convert the arrays into a single Dataframe</span>
+                    <span class="n">run_time_delta_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                        <span class="p">{</span><span class="s1">&#39;mu&#39;</span><span class="p">:</span> <span class="n">mu_arr</span><span class="p">,</span> <span class="s1">&#39;mu error&#39;</span><span class="p">:</span> <span class="n">mu_error_arr</span><span class="p">,</span> <span class="s1">&#39;sigma&#39;</span><span class="p">:</span> <span class="n">sigma_arr</span><span class="p">,</span> <span class="s1">&#39;sigma error&#39;</span><span class="p">:</span> <span class="n">sigma_error_arr</span><span class="p">})</span>
+
+                    <span class="c1"># save it in a .csv file</span>
+                    <span class="n">run_time_delta_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span> <span class="o">+</span>
+                                             <span class="sa">f</span><span class="s1">&#39;/Run time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+            
+    <span class="k">def</span> <span class="nf">__load_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">variation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                     <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s2">&quot;synchronise&quot;</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the Gaussian curve fit statistics of the time delta with respect to ref_channel for a single_run and board.</span>
+<span class="sd">        If variation=&#39;run&#39;, considers the fit over the entire run, if variation=&#39;spill&#39;, considers the fit over each spill separately.</span>
+
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param variation: either &#39;run&#39; (loads the statistics for the entire run) or &#39;spill&#39; (for each spill).</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+
+<span class="sd">        :return: DataFrame of tuple of DataFrame of the .csv file(s) loaded (TODO: unique type?)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>  <span class="c1"># check if the file exists</span>
+
+            <span class="k">if</span> <span class="n">variation</span> <span class="o">==</span> <span class="s1">&#39;spill&#39;</span><span class="p">:</span>  <span class="c1"># returns a tuple with the 4 files</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                    <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill mean time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                    <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill error mean time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                    <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill sigma time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                    <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill error sigma time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># variation==&#39;run&#39;:</span>
+                <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                   <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+        
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span> <span class="c1"># generating the statistics file</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;File not found, generating .csv&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__generate_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">variation</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fit_option</span><span class="o">=</span><span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="o">=</span><span class="n">nb_fits</span><span class="p">)</span>  
+
+            <span class="c1"># loading the file and returning it</span>
+            <span class="k">if</span> <span class="n">variation</span> <span class="o">==</span> <span class="s1">&#39;spill&#39;</span><span class="p">:</span>  <span class="c1"># returns a tuple with the 4 files</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                    <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill mean time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                    <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill error mean time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                    <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill sigma time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">),</span>
+                        <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                    <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Spill error sigma time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># variation==&#39;run&#39;:</span>
+                <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">&#39;</span>
+                                   <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;/Run time delta run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1"> board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1"> ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Could not load nor generate .csv file&#39;</span><span class="p">)</span>
+
+            
+<div class="viewcode-block" id="Time_Delta.get_mean"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.get_mean">[docs]</a>    <span class="k">def</span> <span class="nf">get_mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Getter for the average time difference wrt. to a ref_channel for the entire channels in a board of a single run.</span>
+<span class="sd">        </span>
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        </span>
+<span class="sd">        :return: column of the dataframe containing the average time difference for each channel of the board in the rows</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__load_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">variation</span><span class="o">=</span><span class="s1">&#39;run&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;mu&quot;</span><span class="p">]</span></div>
+    
+    
+<div class="viewcode-block" id="Time_Delta.get_sigma"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.get_sigma">[docs]</a>    <span class="k">def</span> <span class="nf">get_sigma</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Getter for the standard deviation of time difference wrt. to a ref_channel for the entire channels in a board of a single run.</span>
+<span class="sd">        </span>
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        </span>
+<span class="sd">        :return: column of the dataframe containing the standard deviation of the time difference for each channel of the board in the rows</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__load_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">variation</span><span class="o">=</span><span class="s1">&#39;run&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;sigma&quot;</span><span class="p">]</span></div>
+    
+    
+<div class="viewcode-block" id="Time_Delta.get_mean_err"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.get_mean_err">[docs]</a>    <span class="k">def</span> <span class="nf">get_mean_err</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Getter for the error on the average time difference wrt. to a ref_channel for the entire channels in a board of a single run.</span>
+<span class="sd">        </span>
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        </span>
+<span class="sd">        :return: column of the dataframe containing the error on the average time difference for each channel of the board in the rows</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__load_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">variation</span><span class="o">=</span><span class="s1">&#39;run&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;mu error&quot;</span><span class="p">]</span></div>
+    
+    
+<div class="viewcode-block" id="Time_Delta.get_sigma_err"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.get_sigma_err">[docs]</a>    <span class="k">def</span> <span class="nf">get_sigma_err</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Getter for the error on the std dev of the time difference wrt. to a ref_channel for the entire channels in a board of a single run.</span>
+<span class="sd">        </span>
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        </span>
+<span class="sd">        :return: column of the dataframe containing the error on the std dev. of the time difference for each channel of the board in the rows</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__load_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">variation</span><span class="o">=</span><span class="s1">&#39;run&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;sigma error&quot;</span><span class="p">]</span></div>
+            
+        
+    <span class="c1"># ------------------------------------------------------------------------------------------------------------------------------</span>
+    <span class="c1"># SPILLS</span>
+
+    <span class="k">def</span> <span class="nf">__spill_single_board</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                             <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the evolution over the spills in the single_run of the time delta of the channels on the board with</span>
+<span class="sd">        respect to the ref_channel. Finally, fit_option and nb_fits allow to choose a different way of computing the</span>
+<span class="sd">        statistics.</span>
+
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># load the Dataframes</span>
+        <span class="n">mean</span><span class="p">,</span> <span class="n">mean_err</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">sigma_err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__load_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="s1">&#39;spill&#39;</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>
+        <span class="n">num_spills</span> <span class="o">=</span> <span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># number of spills in the single run</span>
+
+        <span class="n">slicing</span> <span class="o">=</span> <span class="p">[</span><span class="n">channel</span> <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="k">if</span> <span class="n">channel</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">board</span><span class="p">]</span>
+
+        <span class="c1"># Spill column in pd.DataFrame for plot</span>
+        <span class="n">spill_column_tmp</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_spills</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">spill_column</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">lst</span> <span class="ow">in</span> <span class="n">spill_column_tmp</span><span class="p">:</span>
+            <span class="n">spill_column</span> <span class="o">+=</span> <span class="n">lst</span>
+
+        <span class="c1"># Channel column in plot pd.DataFrame</span>
+        <span class="n">channel_column</span> <span class="o">=</span> <span class="n">num_spills</span> <span class="o">*</span> <span class="n">slicing</span>
+
+        <span class="c1"># Mean and sigma columns in plot pd.DataFrame</span>
+        <span class="n">mean_arr</span> <span class="o">=</span> <span class="n">mean</span><span class="p">[</span><span class="n">slicing</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">mean_stacked</span> <span class="o">=</span> <span class="n">mean_arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">sigma_arr</span> <span class="o">=</span> <span class="n">sigma</span><span class="p">[</span><span class="n">slicing</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">sigma_stacked</span> <span class="o">=</span> <span class="n">sigma_arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="n">plot_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">&quot;spill&quot;</span><span class="p">:</span> <span class="n">spill_column</span><span class="p">,</span> <span class="s2">&quot;channel&quot;</span><span class="p">:</span> <span class="n">channel_column</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">mean_stacked</span><span class="p">,</span> <span class="s2">&quot;sigma&quot;</span><span class="p">:</span> <span class="n">sigma_stacked</span><span class="p">})</span>
+
+        <span class="n">xlabel</span> <span class="o">=</span> <span class="s1">&#39;Spill&#39;</span>
+        <span class="n">ylabel</span> <span class="o">=</span> <span class="s1">&#39;Time delta (ps)&#39;</span>
+        <span class="n">plot_title</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">, board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1">, ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">, mean time delta over spills&#39;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_ECAL__plot_variation</span><span class="p">(</span><span class="n">plot_df</span><span class="p">,</span> <span class="s1">&#39;spill&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="p">,</span> <span class="n">ylabel</span><span class="p">,</span> <span class="n">plot_title</span><span class="p">)</span>
+
+        
+    <span class="k">def</span> <span class="nf">__spill_single_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">all_channels</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                           <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the evolution over the spills in the single_run of the time delta of the channels with respect to the ref_channel </span>
+<span class="sd">        on one or all the boards depending on all_channels. fit_option and nb_fits allow to choose a different way </span>
+<span class="sd">        of computing the statistics. </span>
+
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param all_channels: True (plots of the time delta evolution with respect to ref_channel for all boards), False (only for the board of ref_channel).</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">all_channels</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">board</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">letters</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__spill_single_board</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">board</span> <span class="o">=</span> <span class="n">ref_channel</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__spill_single_board</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>
+
+            
+<div class="viewcode-block" id="Time_Delta.spill_variation"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.spill_variation">[docs]</a>    <span class="k">def</span> <span class="nf">spill_variation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">all_channels</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;synchronise&#39;</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the evolution over the spills in each of the runs in self.included_runs of the time delta of the channels with respect </span>
+<span class="sd">        to the ref_channel on one or all the boards, depending on the value of all_channels. fit_option and nb_fits allow to </span>
+<span class="sd">        choose a different way of computing the statistics. </span>
+
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param all_channels: True (plots of the time delta evolution with respect to ref_channel for all boards), False (only for the board of ref_channel).</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">single_run</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__spill_single_run</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">all_channels</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span></div>
+
+            
+    <span class="c1"># ------------------------------------------------------------------------------------------------------------------------------</span>
+    <span class="c1"># RUNS</span>
+
+    <span class="c1"># ---- HISTOGRAMS ----</span>
+
+    <span class="k">def</span> <span class="nf">__hist_single_board</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                       <span class="n">variation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">spill_i</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the histograms and corresponding Gaussian fits of the time delta of the channels included in the board with </span>
+<span class="sd">        respect to the ref_channel for the single_run considered. fit_option and nb_fits allow to choose a different way of </span>
+<span class="sd">        computing the statistics. </span>
+
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param variation: either &#39;run&#39; (loads the statistics for the entire run) or &#39;spill&#39; (for each spill).</span>
+<span class="sd">        :param spill_i: integer corresponding to the spill to consider, eg. 3 for the third one.</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__generate_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">variation</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">spill_index</span><span class="o">=</span><span class="n">spill_i</span><span class="p">,</span> 
+                              <span class="n">fit_option</span><span class="o">=</span><span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="o">=</span><span class="n">nb_fits</span><span class="p">)</span>
+
+        
+    <span class="k">def</span> <span class="nf">__hist_single_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">all_channels</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                     <span class="n">variation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">spill_i</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered </span>
+<span class="sd">        with respect to the ref_channel for the single_run considered.</span>
+<span class="sd">        The boards considered can either be all of them, or only the one of ref_channel, depending on the value of all_channels.</span>
+
+<span class="sd">        :param single_run: the number of a run, for example &#39;15610&#39;</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param all_channels: If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">all_channels</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">board</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">letters</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__hist_single_board</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">variation</span><span class="p">,</span> <span class="n">spill_i</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">board</span> <span class="o">=</span> <span class="n">ref_channel</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__hist_single_board</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">variation</span><span class="p">,</span> <span class="n">spill_i</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>
+
+            
+<div class="viewcode-block" id="Time_Delta.hist"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.hist">[docs]</a>    <span class="k">def</span> <span class="nf">hist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">all_channels</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">variation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;run&#39;</span><span class="p">,</span>
+                        <span class="n">spill_i</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;synchronise&#39;</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the histograms and corresponding Gaussian fits of the time delta of the channels for each board considered with </span>
+<span class="sd">        respect to the ref_channel for the single_run considered. The boards considered can either be all of them, or only the </span>
+<span class="sd">        one of ref_channel, depending on the value of all_channels. </span>
+
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param all_channels: If True, plots the histograms for all boards, if False, only plots the time delta evolution for the board of ref_channel.</span>
+<span class="sd">        :param variation: either &#39;run&#39; (loads the statistics for the entire run) or &#39;spill&#39; (for each spill).</span>
+<span class="sd">        :param spill_i: integer corresponding to the spill to consider, eg. 3 for the third one.</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">single_run</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__hist_single_run</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">all_channels</span><span class="p">,</span> <span class="n">variation</span><span class="p">,</span> <span class="n">spill_i</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span></div>
+
+            
+    <span class="c1"># ---- VARIATION OVER RUNS ----</span>
+
+    <span class="k">def</span> <span class="nf">__run_single_board</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the evolution over the runs of the time delta of the channels on the board with respect to the ref_channel.</span>
+<span class="sd">        fit_option and nb_fits allow to choose how the statistics are computed (single or multiple gaussian fits)</span>
+
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># load the Dataframes</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">single_run</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">):</span>
+            <span class="n">run_time_delta_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__load_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="s1">&#39;run&#39;</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>  <span class="c1"># 4 columns, n_numbers rows</span>
+            <span class="n">mean</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">run_time_delta_df</span><span class="p">[</span><span class="s1">&#39;mu&#39;</span><span class="p">]</span>
+            <span class="n">sigma</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">run_time_delta_df</span><span class="p">[</span><span class="s1">&#39;sigma&#39;</span><span class="p">]</span>
+
+        <span class="n">slicing</span> <span class="o">=</span> <span class="p">[</span><span class="n">channel</span> <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="k">if</span> <span class="n">channel</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">board</span><span class="p">]</span>
+
+        <span class="c1"># Run column in pd.DataFrame for plot</span>
+        <span class="n">run_column_tmp</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">))]</span>
+        <span class="n">run_column</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">lst</span> <span class="ow">in</span> <span class="n">run_column_tmp</span><span class="p">:</span>
+            <span class="n">run_column</span> <span class="o">+=</span> <span class="n">lst</span>
+
+        <span class="c1"># Channel column in plot pd.DataFrame</span>
+        <span class="n">channel_column</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">)</span> <span class="o">*</span> <span class="n">slicing</span>
+
+        <span class="c1"># Mean and sigma columns in plot pd.DataFrame</span>
+        <span class="n">mean_stacked</span> <span class="o">=</span> <span class="n">mean</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">sigma_stacked</span> <span class="o">=</span> <span class="n">sigma</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="n">plot_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">&quot;run&quot;</span><span class="p">:</span> <span class="n">run_column</span><span class="p">,</span> <span class="s2">&quot;channel&quot;</span><span class="p">:</span> <span class="n">channel_column</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">mean_stacked</span><span class="p">,</span> <span class="s2">&quot;sigma&quot;</span><span class="p">:</span> <span class="n">sigma_stacked</span><span class="p">})</span>
+
+        <span class="n">xlabel</span> <span class="o">=</span> <span class="s1">&#39;Run&#39;</span>
+        <span class="n">ylabel</span> <span class="o">=</span> <span class="s1">&#39;Time delta (ps)&#39;</span>
+        <span class="n">plot_title</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">, board </span><span class="si">{</span><span class="n">board</span><span class="si">}</span><span class="s1">, ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">, mean time delta over runs&#39;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_ECAL__plot_variation</span><span class="p">(</span><span class="n">plot_df</span><span class="p">,</span> <span class="s1">&#39;run&#39;</span><span class="p">,</span> <span class="n">xlabel</span><span class="p">,</span> <span class="n">ylabel</span><span class="p">,</span> <span class="n">plot_title</span><span class="p">)</span>
+
+        
+<div class="viewcode-block" id="Time_Delta.run_variation"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.run_variation">[docs]</a>    <span class="k">def</span> <span class="nf">run_variation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">all_channels</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;synchronise&#39;</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots the evolution over the runs in self.included_runs of the time delta of the channels with respect to the </span>
+<span class="sd">        ref_channel on one or all the boards, depending on the value of all_channels. fit_option and nb_fits allow to </span>
+<span class="sd">        choose how the statistics are computed (single or multiple gaussian fits)</span>
+
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param all_channels: If True, we make plots of the time delta evolution with respect to ref_channel for all boards, if False, only plots the time delta evolution for the board of ref_channel.</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Need at least two runs to plot a variation&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">all_channels</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">board</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">letters</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__run_single_board</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">board</span> <span class="o">=</span> <span class="n">ref_channel</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__run_single_board</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></div>
+
+        
+    <span class="c1"># ---- STATISTICS OVER RUNS ----</span>
+
+    <span class="k">def</span> <span class="nf">__run_colormesh_single_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">single_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots mean mu for the time delta with respect to ref_channel of a designated single_run in a colormesh plot.</span>
+<span class="sd">        The mesh represents all the channels and the color represents the time delta. fit_option and nb_fits allow to </span>
+<span class="sd">        choose how the statistics are computed (single or multiple gaussian fits)</span>
+
+<span class="sd">        :param single_run: The number of a run, for example &#39;15484&#39;</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># stat_names = [&#39;Mu&#39;, &#39;Mu error&#39;, &#39;Sigma&#39;, &#39;Sigma_error&#39;]</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data_folder</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">single_run</span><span class="p">))</span>
+        <span class="n">run_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">folder</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Run: &#39;</span><span class="p">,</span> <span class="n">run_name</span><span class="p">)</span>
+        <span class="n">run_save</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_folder</span> <span class="o">+</span> <span class="s1">&#39;/Run &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">run_name</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">run_save</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># TODO: do we also want to plot sigma, mu_err, sigma_err?</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">letters</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">board</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">letters</span><span class="p">):</span>
+            <span class="n">run_time_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__load_stats</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="s1">&#39;run&#39;</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span>
+            <span class="n">mean</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">run_time_df</span><span class="p">[</span><span class="s2">&quot;mu&quot;</span><span class="p">])))</span>
+
+        <span class="n">plot_title</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Run </span><span class="si">{</span><span class="n">single_run</span><span class="si">}</span><span class="s1">, ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s1">, mean time delta over runs&#39;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_ECAL__plot_colormesh</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">plot_title</span><span class="p">)</span>
+
+        
+<div class="viewcode-block" id="Time_Delta.run_colormesh"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.run_colormesh">[docs]</a>    <span class="k">def</span> <span class="nf">run_colormesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;synchronise&#39;</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plots mean mu for the time delta with respect to ref_channel of the runs in self.included_runs in</span>
+<span class="sd">        colormesh plots. The mesh represents all the channels and the color represents the time delta.</span>
+
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        :param fit_option: if &#39;synchronise&#39; or &#39;None&#39;, the time deltas are synchronized and one gaussian is fitted. Otherwise, the time deltas are not synchronized and multiple gaussians are fitted.</span>
+<span class="sd">        :param nb_fits: number of gaussians if fit_option opts for multiple gaussians</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">single_run</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__run_colormesh_single_run</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">,</span> <span class="n">fit_option</span><span class="p">,</span> <span class="n">nb_fits</span><span class="p">)</span></div>
+            
+    
+    <span class="c1"># ------------------------------------------------------------------------------------------------------------------------------</span>
+    <span class="c1"># RESOLUTION</span>
+
+    <span class="k">def</span> <span class="nf">__resolution_single_board</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">board</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes and plots the resolution of all the channels in a given board wrt. a given ref_channel. Points are then</span>
+<span class="sd">        fitted with the general function sigma_t_fit()</span>
+<span class="sd">        </span>
+<span class="sd">        :param board: board considered</span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: exception if bad ref_channel or board</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">Amplitude</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">letters</span><span class="p">)</span> <span class="c1"># create new array if ref_channel not in board</span>
+        
+        <span class="c1"># mean amplitude, sigma and associated errors for the chosen board</span>
+        <span class="n">A_lst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+        <span class="n">sigma_lst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+        <span class="n">A_err_lst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+        <span class="n">sigma_err_lst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+        
+        <span class="c1"># mean amplitude and associated error for the board containing the reference channel</span>
+        <span class="n">A_ref_lst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+        <span class="n">A_ref_err_lst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">)))</span>
+
+        <span class="c1"># fill the lists</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">single_run</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">included_runs</span><span class="p">):</span>
+            <span class="n">A_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">)</span>
+            <span class="n">sigma_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_sigma</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">))</span>
+            <span class="n">A_err_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">get_mean_err</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">)</span>
+            <span class="n">sigma_err_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_sigma_err</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">))</span>
+
+            <span class="n">A_ref_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">get_mean</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">A_ref_err_lst</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">get_mean_err</span><span class="p">(</span><span class="n">single_run</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># keep only the data for the ref_channel</span>
+        <span class="n">A2</span> <span class="o">=</span> <span class="n">A_ref_lst</span><span class="p">[:,</span><span class="nb">int</span><span class="p">(</span><span class="n">ref_channel</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">dA2</span> <span class="o">=</span> <span class="n">A_ref_err_lst</span><span class="p">[:,</span><span class="nb">int</span><span class="p">(</span><span class="n">ref_channel</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="n">board</span><span class="o">+</span><span class="n">number</span> <span class="k">for</span> <span class="n">number</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">numbers</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># TODO: remove, this is because the channel C1 was not working properly</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">channel</span> <span class="o">==</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="c1"># ignore the reference channel if it is in the board given</span>
+                <span class="k">continue</span>
+            <span class="n">A1</span> <span class="o">=</span> <span class="n">A_lst</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span>
+            <span class="n">dA1</span> <span class="o">=</span> <span class="n">A_err_lst</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">A1</span><span class="o">*</span><span class="n">A2</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">A1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">A2</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">guess</span> <span class="o">=</span> <span class="p">[</span><span class="mi">100000</span><span class="p">,</span> <span class="mi">50</span><span class="p">]</span> <span class="c1"># provide a good first guess to compute the fit</span>
+            <span class="n">coeff</span><span class="p">,</span> <span class="n">covar</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="n">sigma_t_fit</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">sigma_lst</span><span class="p">[:,</span><span class="n">j</span><span class="p">],</span> <span class="n">p0</span><span class="o">=</span><span class="n">guess</span><span class="p">,</span> <span class="n">maxfev</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span> <span class="c1"># fit the coefficients to the data</span>
+
+            <span class="c1"># create the plotly figure</span>
+            <span class="n">fig</span> <span class="o">=</span> <span class="n">make_subplots</span><span class="p">(</span><span class="n">specs</span><span class="o">=</span><span class="p">[[{</span><span class="s2">&quot;secondary_y&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}]])</span>
+            
+            <span class="c1"># define the errorbars</span>
+            <span class="n">xerror</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="n">dA1</span><span class="o">/</span><span class="n">A1</span> <span class="o">+</span> <span class="n">dA2</span><span class="o">/</span><span class="n">A2</span> <span class="o">+</span> <span class="p">(</span><span class="n">A1</span><span class="o">*</span><span class="n">dA1</span> <span class="o">+</span> <span class="n">A2</span><span class="o">*</span><span class="n">dA2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">A1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">A2</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span> <span class="c1"># &#39;mean&#39; amplitude across channels </span>
+            <span class="n">yerror</span> <span class="o">=</span> <span class="n">sigma_err_lst</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span>
+            
+            <span class="n">df_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">sigma_lst</span><span class="p">[:,</span><span class="n">j</span><span class="p">],</span> <span class="s2">&quot;err_x&quot;</span><span class="p">:</span> <span class="n">xerror</span><span class="p">,</span> <span class="s2">&quot;err_y&quot;</span><span class="p">:</span> <span class="n">yerror</span><span class="p">})</span>
+            <span class="n">trace1</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">data_frame</span><span class="o">=</span><span class="n">df_data</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> 
+                                <span class="n">error_x</span><span class="o">=</span><span class="s2">&quot;err_x&quot;</span><span class="p">,</span> <span class="n">error_y</span><span class="o">=</span><span class="s2">&quot;err_y&quot;</span><span class="p">,</span> 
+                                <span class="n">color_discrete_sequence</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Crimson&quot;</span><span class="p">],</span> 
+                                <span class="n">labels</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;$\sigma_{\Delta t}$ (ps)&quot;</span><span class="p">})</span>
+            <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">trace1</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="c1"># add the trace to the figure</span>
+            
+            <span class="n">xx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="c1"># linspace to have an almost continuous fit</span>
+            <span class="n">df_fit</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">xx</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">sigma_t_fit</span><span class="p">(</span><span class="n">xx</span><span class="p">,</span> <span class="o">*</span><span class="n">coeff</span><span class="p">)})</span>
+            <span class="n">trace2</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df_fit</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+            <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">trace2</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">secondary_y</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># plot the fit</span>
+            
+            <span class="c1"># add title and label</span>
+            <span class="n">plot_title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Time delta absolute resolution, ref </span><span class="si">{</span><span class="n">ref_channel</span><span class="si">}</span><span class="s2">, channel </span><span class="si">{</span><span class="n">channel</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">xlabel</span> <span class="o">=</span> <span class="s2">&quot;Average amplitude A (ADC counts)&quot;</span>
+            <span class="n">ylabel</span> <span class="o">=</span> <span class="s2">&quot;Absolute time resolution (ps)&quot;</span>
+            
+            <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">plot_title</span><span class="p">,</span>
+                              <span class="n">xaxis</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">xlabel</span><span class="p">),</span>
+                              <span class="n">yaxis</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">ylabel</span><span class="p">),</span>
+                              <span class="n">updatemenus</span><span class="o">=</span><span class="p">[</span> <span class="c1"># add the option to change the scale of the axis to linear, semilogy or loglog</span>
+                                           <span class="nb">dict</span><span class="p">(</span>
+                                               <span class="n">buttons</span> <span class="o">=</span> <span class="p">[</span>
+                                                           <span class="nb">dict</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;Linear&quot;</span><span class="p">,</span>
+                                                                <span class="n">method</span><span class="o">=</span><span class="s2">&quot;relayout&quot;</span><span class="p">,</span>
+                                                                <span class="n">args</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;yaxis.type&quot;</span><span class="p">:</span> <span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="s2">&quot;xaxis.type&quot;</span><span class="p">:</span> <span class="s2">&quot;linear&quot;</span><span class="p">}]),</span>
+                                                           <span class="nb">dict</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;Semilog y&quot;</span><span class="p">,</span>
+                                                                <span class="n">method</span><span class="o">=</span><span class="s2">&quot;relayout&quot;</span><span class="p">,</span>
+                                                                <span class="n">args</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;yaxis.type&quot;</span><span class="p">:</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="s2">&quot;xaxis.type&quot;</span><span class="p">:</span> <span class="s2">&quot;linear&quot;</span><span class="p">}]),</span>
+                                                           <span class="nb">dict</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;Loglog&quot;</span><span class="p">,</span>
+                                                                <span class="n">method</span><span class="o">=</span><span class="s2">&quot;relayout&quot;</span><span class="p">,</span>
+                                                                <span class="n">args</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;yaxis.type&quot;</span><span class="p">:</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="s2">&quot;xaxis.type&quot;</span><span class="p">:</span> <span class="s2">&quot;log&quot;</span><span class="p">}])</span>
+                                                         <span class="p">]</span>
+                                                <span class="p">)</span>
+                                            <span class="p">]</span>
+                             <span class="p">);</span>
+            
+            <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            <span class="c1"># TODO: save the figure</span>
+
+
+<div class="viewcode-block" id="Time_Delta.resolution"><a class="viewcode-back" href="../../index.xhtml#ecalautoanalysis.Time_Delta.resolution">[docs]</a>    <span class="k">def</span> <span class="nf">resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes and plots the resolution of all board wrt. a given ref_channel. Points are then</span>
+<span class="sd">        fitted with the general function sigma_t_fit()</span>
+<span class="sd">        </span>
+<span class="sd">        :param ref_channel: reference channel with respect to which the differences are computed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">board</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">letters</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__resolution_single_board</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">ref_channel</span><span class="p">)</span></div></div>
+            
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>
